@@ -7,16 +7,19 @@
     <style>
         :root { --bg: #f0f2f5; --text: #333; --box-bg: white; --header-bg: #004085; }
         .dark-theme { --bg: #18191a; --text: #e4e6eb; --box-bg: #242526; --header-bg: #242526; }
-        
+
         body { font-family: Arial, sans-serif; margin: 15px; background: var(--bg); color: var(--text); transition: all 0.3s ease; }
         .header { background: var(--header-bg); color: white; padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
-        
+
         /* Notice Banner */
         .marquee-container { background: #ffc107; color: #333; padding: 6px; border-radius: 4px; font-weight: bold; margin-top: 10px; font-size:14px; }
+
+        .grid-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; margin-top: 15px; }
+        .card { background: var(--box-bg); padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); cursor: pointer; text-align: center; font-weight: bold; }
         
-        .grid-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; margin-top: 15px; }
-        .card { background: var(--box-bg); padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); cursor: pointer; text-align: center; font-weight: bold; }
-        .course-card { border-top: 4px solid #28a745; color: #28a745; }
+        /* Course Name Bada Karne Ke Liye Styles */
+        .course-card { border-top: 5px solid #28a745; color: #28a745; font-size: 18px !important; padding: 25px 15px; }
+        
         .subject-card { border-top: 4px solid #ffc107; color: #b78a00; }
         .test-card { border-top: 4px solid #17a2b8; color: #17a2b8; }
         .hidden { display: none; }
@@ -25,8 +28,9 @@
         .timer-banner { background: #dc3545; color: white; padding: 10px; font-weight: bold; text-align: center; border-radius: 4px; position: sticky; top: 0; z-index: 100; font-size:18px; }
         .vyakhya-box { background: #fff3cd; color:#333; padding: 8px; border-radius: 4px; margin-top: 5px; border-left: 4px solid #ffc107; font-size: 13px; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size:13px; }
-        th, td { border: 1px solid #ddd; padding: 6px; text-align: left; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
         th { background: rgba(0,0,0,0.05); }
+        .table-select { padding: 4px; font-size: 12px; width: 100%; max-width: 150px; margin-top: 4px; border-radius: 4px; border: 1px solid #ccc; }
         .theme-btn { background: none; border: none; font-size: 20px; cursor: pointer; }
     </style>
 </head>
@@ -48,19 +52,27 @@
         <div id="mainTitle"><h3>Apna Course Select Karein</h3></div>
         <div id="displayGrid" class="grid-container"></div>
 
-        <div class="box" id="bookmarkSection">
-            <h3>⭐ My Bookmarked Questions Revision Bank</h3>
-            <div id="bookmarkList" style="font-size: 13px; color: #555;">No bookmarks saved yet. Review solutions after tests to add questions here!</div>
-        </div>
-
-        <div class="box">
-            <h3>📊 My Past Performance Record</h3>
-            <table id="historyTable"><thead><tr><th>Test Name</th><th>Score</th><th>Date Given</th><th>Attempt Type</th></tr></thead><tbody></tbody></table>
-        </div>
-
         <div class="box" style="background: rgba(255,152,0,0.05); border:1px solid #f5e4cc;">
             <h3>🏆 Public Rank Leaderboard (Names Only)</h3>
-            <table id="studentLeaderboardTable"><thead><tr><th>Rank</th><th>Student Name</th><th>Test Name</th><th>Final Score</th><th>Date</th></tr></thead><tbody></tbody></table>
+            <table id="studentLeaderboardTable">
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>Student Name</th>
+                        <th>
+                            Subject <br>
+                            <select id="filterSubject" class="table-select" onchange="filterLeaderboard()"><option value="">All Subjects</option></select>
+                        </th>
+                        <th>
+                            Test Name <br>
+                            <select id="filterTest" class="table-select" onchange="filterLeaderboard()"><option value="">All Tests</option></select>
+                        </th>
+                        <th>Final Score</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody id="leaderboardBody"></tbody>
+            </table>
         </div>
     </div>
 
@@ -74,7 +86,7 @@
     <div id="resultSection" class="box hidden">
         <h2 style="color:green; text-align:center;">🎉 Test Submitted Successfully!</h2>
         <h3 id="scoreDisplay" style="text-align:center; padding:10px; background:rgba(40,167,69,0.1);"></h3>
-        <p style="text-align:center; color:#666; font-size:12px;">💡 Tip: Clear options or bookmark specific rows below for permanent study revision storage.</p>
+        <p style="text-align:center; color:#666; font-size:12px;">💡 Tip: Review solutions after tests to analyze performance accuracy.</p>
         <div id="reviewArea"></div>
         <button onclick="location.reload()" style="background:#004085; color:white; border:none; padding:12px; width:100%; border-radius:4px; cursor:pointer; font-weight:bold;">Back to Dashboard</button>
     </div>
@@ -82,34 +94,19 @@
     <script>
         let allData = [], currentLevel = 'courses', selectedCourse = null, selectedSubject = null, activeQuestions = [], timerInterval = null, totalSecondsLeft = 0, currentTestId = '', currentTestName = '';
         let tabCheatCount = 0, isTestActive = false, answersCache = {};
+        let originalLeaderboardData = []; // To hold raw leaderboard items for live filtering
 
         async function init() {
             const student = JSON.parse(localStorage.getItem('student')); if(!student) { window.location.href = 'index.html'; return; }
             document.getElementById('welcomeMsg').innerText = `👤 ${student.name}`;
             if(localStorage.getItem('theme') === 'dark') document.body.classList.add('dark-theme');
-            
+
             const res = await fetch('/api/content'); allData = await res.json();
-            renderCourses(); loadStudentHistory(student.mobile); loadLeaderboard(); loadNotice(); loadBookmarks();
+            renderCourses(); loadLeaderboard(); loadNotice();
         }
 
         function toggleTheme() { document.body.classList.toggle('dark-theme'); localStorage.setItem('theme', document.body.classList.contains('dark-theme') ? 'dark' : 'light'); }
         async function loadNotice() { const res = await fetch('/api/notice'); const d = await res.json(); document.getElementById('noticeText').innerText = d.notice || "CGTS Live Test Engine Open."; }
-
-        // Local Storage Bookmark Tracker Loader Engine
-        function loadBookmarks() {
-            let bookmarks = JSON.parse(localStorage.getItem('stu_bookmarks')) || [];
-            const container = document.getElementById('bookmarkList');
-            if(bookmarks.length === 0) { container.innerHTML = "No saved revision rows found."; return; }
-            container.innerHTML = '';
-            bookmarks.forEach((b, i) => {
-                container.innerHTML += `<div class="q-block" style="border-left:4px solid #17a2b8;"><strong>Q: ${b.qText}</strong><br><span style="color:green; font-weight:bold;">Answer: ${b.ans}</span><br><small>Explanation: ${b.vyakhya}</small><br><button onclick="removeBookmark(${i})" style="margin-top:5px; background:#dc3545; color:white; border:none; padding:2px 5px; border-radius:3px; cursor:pointer;">Delete</button></div>`;
-            });
-        }
-        function saveBookmark(qText, ans, vyakhya) {
-            let bookmarks = JSON.parse(localStorage.getItem('stu_bookmarks')) || [];
-            if(!bookmarks.find(b => b.qText === qText)) { bookmarks.push({qText, ans, vyakhya}); localStorage.setItem('stu_bookmarks', JSON.stringify(bookmarks)); alert("Added to Bookmarks!"); loadBookmarks(); }
-        }
-        function removeBookmark(index) { let bookmarks = JSON.parse(localStorage.getItem('stu_bookmarks')) || []; bookmarks.splice(index, 1); localStorage.setItem('stu_bookmarks', JSON.stringify(bookmarks)); loadBookmarks(); }
 
         // Auto-Save Offline Resiliency Protection Cache Hook
         function trackOfflineCache(qIndex, val) { answersCache[`q_${currentTestId}_${qIndex}`] = val; localStorage.setItem('offline_answers', JSON.stringify(answersCache)); }
@@ -130,14 +127,13 @@
             selectedSubject.tests.forEach(t => { document.getElementById('displayGrid').innerHTML += `<div class="card test-card" onclick="startTest(${t.id}, '${t.name}')">📝 ${t.name}<br><span style="font-size:11px; font-weight:normal; color:#666;">Time: ${t.questions.length} Mins (0.25 Neg)</span></div>`; });
         }
 
-        // TIMER OPTIMIZATION: 1 Minute allocated per question dynamically inside global clock variables
         function startTest(tId, tName) {
             const test = selectedSubject.tests.find(t => t.id === tId); activeQuestions = test.questions; if(activeQuestions.length === 0) return alert("Test Khali Hai!");
             currentTestId = tId; currentTestName = tName; tabCheatCount = 0; isTestActive = true;
             answersCache = JSON.parse(localStorage.getItem('offline_answers')) || {};
 
             document.getElementById('portalHub').classList.add('hidden'); document.getElementById('testSection').classList.remove('hidden'); document.getElementById('activeTestTitle').innerText = tName;
-            
+
             totalSecondsLeft = activeQuestions.length * 60; startTimer();
 
             const qArea = document.getElementById('questionArea'); qArea.innerHTML = '';
@@ -179,31 +175,72 @@
                         <p style="color:${studentAns===q.ans?'green':studentAns==='Nahi Diya'?'#555':'red'}">Aapka Answer: ${studentAns}</p>
                         <p style="color:green; font-weight:bold;">Correct Option: ${q.ans}</p>
                         <div class="vyakhya-box"><b>💡 Vyakhya:</b> ${q.vyakhya}</div>
-                        <button class="card" style="padding:4px 8px; font-size:11px; margin-top:5px; display:inline;" onclick="saveBookmark('${q.qText.replace(/'/g, "\\'")}', '${q.ans}', '${q.vyakhya.replace(/'/g, "\\'")}')">⭐ Save Bookmark</button>
                     </div>`;
-                
+
                 delete answersCache[`q_${currentTestId}_${idx}`];
             });
 
             localStorage.setItem('offline_answers', JSON.stringify(answersCache));
             let net = (correct * 1) - (wrong * 0.25); let finalScore = net < 0 ? 0 : net;
             document.getElementById('scoreDisplay').innerHTML = `Sahi: <b>${correct}</b> | Galat: <b>${wrong}</b> <br> Total Score: <mark><b>${finalScore.toFixed(2)}</b> / ${activeQuestions.length}</mark>`;
-            
+
             document.getElementById('testSection').classList.add('hidden'); document.getElementById('resultSection').classList.remove('hidden');
 
             const student = JSON.parse(localStorage.getItem('student'));
             await fetch('/api/test/submit', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ studentName: student.name, mobile: student.mobile, testId: currentTestId, testName: currentTestName, score: finalScore.toFixed(2), totalQs: activeQuestions.length }) });
         }
 
-        async function loadStudentHistory(mobile) {
-            const res = await fetch(`/api/history/${mobile}`); const history = await res.json();
-            const tbody = document.querySelector('#historyTable tbody'); tbody.innerHTML = '';
-            history.reverse().forEach(h => { tbody.innerHTML += `<tr><td>${h.testName}</td><td><b>${h.score}</b> / ${h.totalQs}</td><td>${h.date}</td><td>${h.isFirstAttempt ? '<span style="color:green; font-weight:bold;">First Attempt</span>':'<span>Practice Run</span>'}</td></tr>`; });
-        }
+        // Leaderboard Data Handler with Dropdown filter populator
         async function loadLeaderboard() {
-            const res = await fetch('/api/leaderboard'); const list = await res.json();
-            const tbody = document.querySelector('#studentLeaderboardTable tbody'); tbody.innerHTML = '';
-            list.forEach((l, idx) => { tbody.innerHTML += `<tr><td><b>#${idx+1}</b></td><td>${l.studentName}</td><td>${l.testName}</td><td><mark><b>${l.score}</b></mark></td><td>${l.date}</td></tr>`; });
+            const res = await fetch('/api/leaderboard'); originalLeaderboardData = await res.json();
+            
+            let subjects = new Set();
+            let tests = new Set();
+
+            originalLeaderboardData.forEach(l => {
+                let parts = l.testName.split(' | ');
+                l.extractedSubject = parts[0] || 'General';
+                l.extractedTest = parts[1] || l.testName;
+                subjects.add(l.extractedSubject);
+                tests.add(l.extractedTest);
+            });
+
+            // Fill Dropdown filters
+            const subFilter = document.getElementById('filterSubject');
+            const testFilter = document.getElementById('filterTest');
+            
+            subFilter.innerHTML = '<option value="">All Subjects</option>';
+            testFilter.innerHTML = '<option value="">All Tests</option>';
+
+            subjects.forEach(s => subFilter.innerHTML += `<option value="${s}">${s}</option>`);
+            tests.forEach(t => testFilter.innerHTML += `<option value="${t}">${t}</option>`);
+
+            displayLeaderboard(originalLeaderboardData);
+        }
+
+        function displayLeaderboard(data) {
+            const tbody = document.getElementById('leaderboardBody'); tbody.innerHTML = '';
+            if(data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">No match found!</td></tr>`;
+                return;
+            }
+            data.forEach((l, idx) => { 
+                tbody.innerHTML += `<tr><td><b>#${idx+1}</b></td><td>${l.studentName}</td><td>${l.extractedSubject}</td><td>${l.extractedTest}</td><td><mark><b>${l.score}</b></mark></td><td>${l.date}</td></tr>`; 
+            });
+        }
+
+        // Live Frontend Filtering Engine
+        function filterLeaderboard() {
+            const subVal = document.getElementById('filterSubject').value;
+            const testVal = document.getElementById('filterTest').value;
+
+            const filtered = originalLeaderboardData.filter(l => {
+                const matchSub = (subVal === "" || l.extractedSubject === subVal);
+                const matchTest = (testVal === "" || l.extractedTest === testVal);
+                return matchSub && matchTest;
+            });
+
+            displayLeaderboard(filtered);
         }
 
         function goBack() { if(currentLevel==='subjects') renderCourses(); else if(currentLevel==='tests') selectCourse(selectedCourse.id); }
