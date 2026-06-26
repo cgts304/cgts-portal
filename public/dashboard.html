@@ -8,16 +8,19 @@
         body { font-family: 'Segoe UI', Arial, sans-serif; margin: 15px; background: #f0f2f5; }
         .header { background: #004085; color: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
         .header h2 { margin: 0; font-size: 18px; }
-        .grid-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; margin-top: 15px; }
-        .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.06); cursor: pointer; transition: 0.2s; text-align: center; font-size: 16px; font-weight: bold; }
-        .card:hover { transform: translateY(-3px); box-shadow: 0 6px 12px rgba(0,0,0,0.1); }
+        .grid-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(145px, 1fr)); gap: 15px; margin-top: 15px; }
+        .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.06); cursor: pointer; text-align: center; font-size: 15px; font-weight: bold; }
         .course-card { border-top: 5px solid #28a745; background: #eafaf1; color: #28a745; }
         .subject-card { border-top: 5px solid #ffc107; background: #fffdf3; color: #b78a00; }
         .test-card { border-top: 5px solid #17a2b8; background: #f0fbfc; color: #17a2b8; }
         .hidden { display: none; }
-        .test-box { background: white; padding: 20px; border-radius: 10px; margin-top: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        .test-box, .result-box { background: white; padding: 20px; border-radius: 10px; margin-top: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
         .back-btn { background: #6c757d; color: white; padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer; margin-bottom: 15px; font-weight: bold; }
-        .logout-btn { background: #dc3545; color: white; border: none; padding: 6px 12px; cursor: pointer; border-radius: 4px; font-size: 12px; }
+        .logout-btn { background: #dc3545; color: white; border: none; padding: 6px 12px; cursor: pointer; border-radius: 4px; }
+        .q-block { margin-bottom: 20px; padding: 15px; background:#fafafa; border-radius:6px; border:1px solid #eee; }
+        .vyakhya-box { background: #fff3cd; padding: 10px; border-radius: 5px; margin-top: 8px; border-left: 4px solid #ffc107; font-size: 14px; color: #664d03; }
+        .wrong-ans { color: red; font-weight: bold; }
+        .right-ans { color: green; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -32,11 +35,19 @@
     <div id="mainTitle"><h3>Apna Course Chunein</h3></div>
     <div id="displayGrid" class="grid-container"></div>
 
-    <!-- Active Live Test -->
+    <!-- Active Test Section -->
     <div id="testSection" class="test-box hidden">
-        <h2 id="activeTestTitle" style="color: #004085;"></h2>
+        <h2 id="activeTestTitle" style="color: #004085; text-align:center;"></h2>
         <div id="questionArea"></div>
         <button onclick="submitTest()" style="background: #28a745; color:white; padding: 12px 25px; border:none; border-radius:6px; cursor:pointer; font-size:16px; font-weight:bold; width:100%; margin-top:15px;">Submit Test</button>
+    </div>
+
+    <!-- Result / Review Section (Sawal + Jawab + Vyakhya) -->
+    <div id="resultSection" class="result-box hidden">
+        <h2 style="color: #28a745; text-align: center;">🎉 Test Result & Answers Review</h2>
+        <h3 id="scoreDisplay" style="text-align: center; background: #e2f0d9; padding: 10px; border-radius: 5px;"></h3>
+        <div id="reviewArea"></div>
+        <button onclick="renderCourses()" style="background:#0056b3; color:white; border:none; padding:12px; width:100%; font-weight:bold; border-radius:6px; margin-top:15px; cursor:pointer;">Dashboard Par Wapas Jayein</button>
     </div>
 
     <script>
@@ -50,7 +61,6 @@
             const student = JSON.parse(localStorage.getItem('student'));
             if(!student) { window.location.href = 'index.html'; return; }
             document.getElementById('welcomeMsg').innerText = `👤 ${student.name}`;
-
             const res = await fetch('/api/content');
             allData = await res.json();
             renderCourses();
@@ -60,6 +70,7 @@
             currentLevel = 'courses';
             document.getElementById('backBtn').classList.add('hidden');
             document.getElementById('testSection').classList.add('hidden');
+            document.getElementById('resultSection').classList.add('hidden');
             document.getElementById('displayGrid').classList.remove('hidden');
             document.getElementById('mainTitle').innerHTML = "<h3>🏢 Available Courses</h3>";
             
@@ -75,7 +86,6 @@
             currentLevel = 'subjects';
             document.getElementById('backBtn').classList.remove('hidden');
             document.getElementById('mainTitle').innerHTML = "<h3>📖 Select Subject</h3>";
-            
             const grid = document.getElementById('displayGrid');
             grid.innerHTML = '';
             selectedCourse.subjects.forEach(s => {
@@ -87,15 +97,10 @@
             selectedSubject = selectedCourse.subjects.find(s => s.id === sId);
             currentLevel = 'tests';
             document.getElementById('mainTitle').innerHTML = "<h3>📝 Select Test</h3>";
-            
             const grid = document.getElementById('displayGrid');
             grid.innerHTML = '';
             selectedSubject.tests.forEach(t => {
-                grid.innerHTML += `
-                    <div class="card test-card" onclick="startTest(${t.id})">
-                        ✏️ ${t.name} <br>
-                        <span style="font-size:11px; color:#666; font-weight:normal;">Qs: ${t.questions.length}</span>
-                    </div>`;
+                grid.innerHTML += `<div class="card test-card" onclick="startTest(${t.id})">✏️ ${t.name}<br><span style="font-size:11px; color:#666; font-weight:normal;">Qs: ${t.questions.length}</span></div>`;
             });
         }
 
@@ -103,7 +108,6 @@
             const test = selectedSubject.tests.find(t => t.id === tId);
             activeQuestions = test.questions;
             currentLevel = 'active-test';
-
             document.getElementById('displayGrid').classList.add('hidden');
             document.getElementById('testSection').classList.remove('hidden');
             document.getElementById('activeTestTitle').innerText = test.name;
@@ -117,24 +121,42 @@
 
             activeQuestions.forEach((q, index) => {
                 qArea.innerHTML += `
-                    <div style="margin-bottom: 15px; padding: 12px; background:#fafafa; border-radius:6px; border:1px solid #eee;">
+                    <div class="q-block">
                         <p><strong>Q${index+1}: ${q.qText}</strong></p>
-                        <label><input type="radio" name="q${index}" value="A"> A) ${q.options[0]}</label><br><br>
-                        <label><input type="radio" name="q${index}" value="B"> B) ${q.options[1]}</label>
+                        <label><input type="radio" name="q${index}" value="A"> <b>A)</b> ${q.options[0]}</label><br><br>
+                        <label><input type="radio" name="q${index}" value="B"> <b>B)</b> ${q.options[1]}</label><br><br>
+                        <label><input type="radio" name="q${index}" value="C"> <b>C)</b> ${q.options[2]}</label><br><br>
+                        <label><input type="radio" name="q${index}" value="D"> <b>D)</b> ${q.options[3]}</label>
                     </div>`;
             });
         }
 
         function submitTest() {
             let score = 0;
+            const reviewArea = document.getElementById('reviewArea');
+            reviewArea.innerHTML = '';
+
             activeQuestions.forEach((q, index) => {
                 const selected = document.querySelector(`input[name="q${index}"]:checked`);
-                if(selected && selected.value === q.ans) {
-                    score++;
-                }
+                const studentAns = selected ? selected.value : 'Nahi Diya';
+                const isCorrect = studentAns === q.ans;
+                
+                if(isCorrect) score++;
+
+                reviewArea.innerHTML += `
+                    <div class="q-block" style="border-left: 5px solid ${isCorrect ? 'green' : 'red'};">
+                        <p><strong>Q${index+1}: ${q.qText}</strong></p>
+                        <p>A) ${q.options[0]} | B) ${q.options[1]} | C) ${q.options[2]} | D) ${q.options[3]}</p>
+                        <p class="${isCorrect ? 'right-ans' : 'wrong-ans'}">Aapka Jawab: ${studentAns}</p>
+                        <p class="right-ans">Sahi Jawab: ${q.ans}</p>
+                        <div class="vyakhya-box"><strong>💡 व्याख्या:</strong> ${q.vyakhya || 'Koi vyakhya available nahi hai.'}</div>
+                    </div>`;
             });
-            alert(`🎉 Test Completed!\nAapka Total Score: ${score} / ${activeQuestions.length}`);
-            renderCourses();
+
+            document.getElementById('scoreDisplay').innerText = `Total Score: ${score} / ${activeQuestions.length}`;
+            document.getElementById('testSection').classList.add('hidden');
+            document.getElementById('resultSection').classList.remove('hidden');
+            window.scrollTo(0,0);
         }
 
         function goBack() {
