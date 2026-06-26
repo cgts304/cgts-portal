@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CGTS - Assistant Teacher Recruitment</title>
+    <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; background: #eef2f7; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; flex-direction: column; }
+        .brand { text-align: center; margin-bottom: 20px; color: #004085; }
+        .container { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; width: 100%; max-width: 800px; padding: 10px; }
+        .box { background: white; padding: 25px; border-radius: 12px; box-shadow: 0px 5px 15px rgba(0,0,0,0.08); width: 320px; box-sizing: border-box; }
+        h2 { margin-top: 0; color: #333; font-size: 22px; text-align: center; border-bottom: 2px solid #0056b3; padding-bottom: 8px; }
+        input { width: 100%; padding: 10px; margin: 12px 0; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
+        button { width: 100%; padding: 11px; background: #28a745; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; }
+        .btn-reg { background: #0056b3; }
+        .admin-link { display: block; text-align: center; margin-top: 20px; color: #6c757d; text-decoration: none; font-size: 14px; }
+    </style>
+</head>
+<body>
+
+    <div class="brand">
+        <h1>CGTS Test Series</h1>
+        <p>Assistant Teacher Recruitment Portal</p>
+    </div>
+
+    <div class="container">
+        <div class="box">
+            <h2>Student Login</h2>
+            <input type="text" id="loginMobile" placeholder="Registered Mobile Number">
+            <input type="password" id="loginPassword" placeholder="Password">
+            <button onclick="login()">Login Karein</button>
+            <a href="admin-login.html" class="admin-link">⚙️ Admin Login Panel</a>
+        </div>
+
+        <div class="box">
+            <h2>New Registration</h2>
+            <input type="text" id="regName" placeholder="Aapka Pura Naam">
+            <input type="text" id="regMobile" placeholder="Mobile Number">
+            <input type="password" id="regPassword" placeholder="Naya Password Banayein">
+            <button class="btn-reg" onclick="register()">Register Karein</button>
+        </div>
+    </div>
+
+    <script>
+        async function register() {
+            const name = document.getElementById('regName').value;
+            const mobile = document.getElementById('regMobile').value;
+            const password = document.getElementById('regPassword').value;
+
+            const res = await fetch('/api/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, mobile, password })
+            });
+            const data = await res.json();
+            alert(data.message);
+        }
+
+        async function login() {
+            const mobile = document.getElementById('loginMobile').value;
+            const password = document.getElementById('loginPassword').value;
+
+            const res = await fetch('/api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ mobile, password })
+            });
+            const data = await res.json();
+            if(res.ok) {
+                localStorage.setItem('student', JSON.stringify(data.student));
+                window.location.href = 'dashboard.html';
+            } else {
+                alert(data.message);
+            }
+        }
+    </script>
+</body>
+</html>
+
