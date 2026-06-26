@@ -15,7 +15,7 @@
         .card:hover { transform: translateY(-10px) scale(1.05); }
         .card:active { transform: scale(0.97); }
         .course-card { border: 3px solid #10b981; color: #10b981; background: linear-gradient(135deg, rgba(16,185,129,0.05), var(--box-bg)); }
-        .subject-card { border: 3px solid #f59e0b; color: #d97706; background: linear-gradient(135deg, rgba(245,158,11,0.05), var(--box-bg)); }
+        .subject-card { border: 3px solid #f59e0b; color: #d97706; background: linear-gradient(135deg, rgba(245, 158, 11, 0.05), var(--box-bg)); }
         .test-card { border: 3px solid #3b82f6; color: #3b82f6; background: linear-gradient(135deg, rgba(59,130,246,0.05), var(--box-bg)); }
         .test-card-subtext { font-size: 14px; font-weight: 600; color: #64748b; margin-top: 12px; background: rgba(0,0,0,0.05); padding: 4px 12px; border-radius: 30px; }
         .hidden { display: none; }
@@ -26,7 +26,7 @@
         table { width: 100%; border-collapse: collapse; margin-top: 15px; }
         th, td { border: 1px solid #e2e8f0; padding: 10px; text-align: left; }
         th { background: rgba(0,0,0,0.03); }
-        .filter-input { width: 100%; padding: 10px; margin-top: 10px; margin-bottom: 5px; border-radius: 6px; border: 1px solid #cbd5e1; box-sizing: border-box; background: var(--bg); color: var(--text); }
+        .table-select { width: 100%; padding: 5px; margin-top: 5px; border-radius: 4px; border: 1px solid #cbd5e1; background: var(--box-bg); color: var(--text); font-weight: normal; }
     </style>
 </head>
 <body>
@@ -50,14 +50,43 @@
         
         <div class="box">
             <h3>📊 Past Performance Record</h3>
-            <input type="text" id="historyFilter" class="filter-input" placeholder="🔍 Subject ya Test ke naam se filter karein..." onkeyup="filterTable('historyTable', this.value)">
-            <table><thead><tr><th>Subject & Test Name</th><th>Score</th><th>Date</th><th>Type</th></tr></thead><tbody id="historyTable"></tbody></table>
+            <table>
+                <thead>
+                    <tr>
+                        <th>
+                            Subject Name <br>
+                            <select id="histSubDrop" class="table-select" onchange="filterTableDropdown('historyTable', 0, this.value)"><option value="">All Subjects</option></select>
+                        </th>
+                        <th>
+                            Test Name <br>
+                            <select id="histTestDrop" class="table-select" onchange="filterTableDropdown('historyTable', 1, this.value)"><option value="">All Tests</option></select>
+                        </th>
+                        <th>Score</th><th>Date</th><th>Type</th>
+                    </tr>
+                </thead>
+                <tbody id="historyTable"></tbody>
+            </table>
         </div>
 
         <div class="box" style="background:rgba(245,158,11,0.02); border:1px solid #fef3c7;">
             <h3>🏆 Public Leaderboard</h3>
-            <input type="text" id="leaderboardFilter" class="filter-input" placeholder="🔍 Student Name, Subject ya Test se filter karein..." onkeyup="filterTable('leaderboardTable', this.value)">
-            <table><thead><tr><th>Rank</th><th>Student Name</th><th>Subject & Test Name</th><th>Score</th><th>Date</th></tr></thead><tbody id="leaderboardTable"></tbody></table>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Rank</th><th>Student Name</th>
+                        <th>
+                            Subject Name <br>
+                            <select id="leadSubDrop" class="table-select" onchange="filterTableDropdown('leaderboardTable', 2, this.value)"><option value="">All Subjects</option></select>
+                        </th>
+                        <th>
+                            Test Name <br>
+                            <select id="leadTestDrop" class="table-select" onchange="filterTableDropdown('leaderboardTable', 3, this.value)"><option value="">All Tests</option></select>
+                        </th>
+                        <th>Score</th><th>Date</th>
+                    </tr>
+                </thead>
+                <tbody id="leaderboardTable"></tbody>
+            </table>
         </div>
     </div>
 
@@ -76,7 +105,7 @@
     </div>
 
     <script>
-        let allData = [], currentLevel = 'courses', selectedCourse = null, selectedSubject = null, activeQuestions = [], timerInterval = null, totalSecondsLeft = 0, currentTestId = '', currentTestName = '', tabCheatCount = 0, isTestActive = false, answersCache = {};
+        let allData = [], currentLevel = 'courses', selectedCourse = null, selectedSubject = null, activeQuestions = [], timerInterval = null, totalSecondsLeft = 0, currentTestId = '', currentTestName = '', currentSubName = '', tabCheatCount = 0, isTestActive = false, answersCache = {};
 
         const $ = id => document.getElementById(id);
 
@@ -105,7 +134,7 @@
         function removeBookmark(index) { let bks = JSON.parse(localStorage.getItem('stu_bookmarks')) || []; bks.splice(index, 1); localStorage.setItem('stu_bookmarks', JSON.stringify(bks)); loadBookmarks(); }
 
         function trackOfflineCache(qIndex, val) { answersCache[`q_${currentTestId}_${qIndex}`] = val; localStorage.setItem('offline_answers', JSON.stringify(answersCache)); }
-        document.addEventListener('visibilitychange', () => { if (isTestActive && document.hidden && ++tabCheatCount >= 2) { alert("🚨 TAB CHANGE DETECTED! SUBMITTING TEST."); submitTest(); } });
+        document.addEventListener('visibilitychange', () => { if (isTestActive && document.hidden && ++tabCheatCount >= 2) { alert("🚨 TAB CHANGE DETECTED!"); submitTest(); } });
 
         function renderCourses() {
             currentLevel = 'courses'; isTestActive = false; $('backBtn').classList.add('hidden'); $('portalHub').classList.remove('hidden'); $('testSection').classList.add('hidden');
@@ -125,10 +154,12 @@
 
         function startTest(tId, tName) {
             const test = selectedSubject.tests.find(t => t.id === tId); activeQuestions = test.questions; if(!activeQuestions.length) return alert("Test Khali Hai!");
-            currentTestId = tId; currentTestName = `${selectedSubject.name} - ${tName}`; // Yahan automatic subject prefix joda gaya hai backend submission ke liye
+            currentTestId = tId; 
+            currentTestName = tName;
+            currentSubName = selectedSubject.name; 
             tabCheatCount = 0; isTestActive = true;
             answersCache = JSON.parse(localStorage.getItem('offline_answers')) || {};
-            $('portalHub').classList.add('hidden'); $('testSection').classList.remove('hidden'); $('activeTestTitle').innerText = currentTestName;
+            $('portalHub').classList.add('hidden'); $('testSection').classList.remove('hidden'); $('activeTestTitle').innerText = `${currentSubName} - ${currentTestName}`;
             totalSecondsLeft = activeQuestions.length * 60; startTimer();
             
             $('questionArea').innerHTML = activeQuestions.map((q, idx) => {
@@ -162,19 +193,53 @@
             $('testSection').classList.add('hidden'); $('resultSection').classList.remove('hidden');
             
             const stu = JSON.parse(localStorage.getItem('student'));
-            await fetch('/api/test/submit', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ studentName: stu.name, mobile: stu.mobile, testId: currentTestId, testName: currentTestName, score: fs.toFixed(2), totalQs: activeQuestions.length }) });
+            // Backend update parsing testName and subject separately inside a structured object
+            await fetch('/api/test/submit', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ studentName: stu.name, mobile: stu.mobile, testId: currentTestId, testName: `${currentSubName} | ${currentTestName}`, score: fs.toFixed(2), totalQs: activeQuestions.length }) });
         }
 
-        async function loadStudentHistory(mb) { try{ const res = await fetch(`/api/history/${mb}`); const h = await res.json(); $('historyTable').innerHTML = h.reverse().map(r => `<tr><td>${r.testName}</td><td><b>${r.score}</b> / ${r.totalQs}</td><td>${r.date}</td><td>${r.isFirstAttempt ? '<span style="color:#10b981; font-weight:bold;">First Attempt</span>':'<span>Practice Run</span>'}</td></tr>`).join(''); }catch(e){} }
-        async function loadLeaderboard() { try{ const list = await (await fetch('/api/leaderboard')).json(); $('leaderboardTable').innerHTML = list.map((l, i) => `<tr><td><b>#${i+1}</b></td><td>${l.studentName}</td><td>${l.testName}</td><td><mark><b>${l.score}</b></mark></td><td>${l.date}</td></tr>`).join(''); }catch(e){} }
-        
-        // --- LIVE TABLE FILTER ENGINE ---
-        function filterTable(tableId, filterValue) {
-            const val = filterValue.toLowerCase();
+        async function loadStudentHistory(mb) { 
+            try{ 
+                const res = await fetch(`/api/history/${mb}`); const h = await res.json(); 
+                let subs = new Set(), tsts = new Set();
+                $('historyTable').innerHTML = h.reverse().map(r => {
+                    let parts = r.testName.split(' | ');
+                    let sub = parts[0] || 'N/A', tst = parts[1] || r.testName;
+                    subs.add(sub); tsts.add(tst);
+                    return `<tr><td>${sub}</td><td>${tst}</td><td><b>${r.score}</b> / ${r.totalQs}</td><td>${r.date}</td><td>${r.isFirstAttempt ? 'First Attempt':'Practice'}</td></tr>`;
+                }).join('');
+                populateDropdown('histSubDrop', subs); populateDropdown('histTestDrop', tsts);
+            }catch(e){} 
+        }
+
+        async function loadLeaderboard() { 
+            try{ 
+                const list = await (await fetch('/api/leaderboard')).json(); 
+                let subs = new Set(), tsts = new Set();
+                $('leaderboardTable').innerHTML = list.map((l, i) => {
+                    let parts = l.testName.split(' | ');
+                    let sub = parts[0] || 'N/A', tst = parts[1] || l.testName;
+                    subs.add(sub); tsts.add(tst);
+                    return `<tr><td><b>#${i+1}</b></td><td>${l.studentName}</td><td>${sub}</td><td>${tst}</td><td><mark><b>${l.score}</b></mark></td><td>${l.date}</td></tr>`;
+                }).join('');
+                populateDropdown('leadSubDrop', subs); populateDropdown('leadTestDrop', tsts);
+            }catch(e){} 
+        }
+
+        function populateDropdown(id, set) {
+            const el = $(id); el.innerHTML = `<option value="">All</option>`;
+            set.forEach(v => el.innerHTML += `<option value="${v}">${v}</option>`);
+        }
+
+        // --- MULTI-COLUMN DROPDOWN FILTER ENGINE ---
+        function filterTableDropdown(tableId, colIndex, val) {
             const rows = document.querySelectorAll(`#${tableId} tr`);
             rows.forEach(row => {
-                const text = row.innerText.toLowerCase();
-                row.style.display = text.includes(val) ? "" : "none";
+                const cellText = row.children[colIndex] ? row.children[colIndex].innerText : '';
+                if(val === "" || cellText === val) {
+                    row.style.display = "";
+                } else {
+                    row.style.display = "none";
+                }
             });
         }
 
