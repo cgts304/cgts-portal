@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CGTS - Student Dashboard</title>
+    <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; margin: 15px; background: #f0f2f5; }
+        .header { background: #004085; color: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+        .header h2 { margin: 0; font-size: 18px; }
+        .grid-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; margin-top: 15px; }
+        .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.06); cursor: pointer; transition: 0.2s; text-align: center; font-size: 16px; font-weight: bold; }
+        .card:hover { transform: translateY(-3px); box-shadow: 0 6px 12px rgba(0,0,0,0.1); }
+        .course-card { border-top: 5px solid #28a745; background: #eafaf1; color: #28a745; }
+        .subject-card { border-top: 5px solid #ffc107; background: #fffdf3; color: #b78a00; }
+        .test-card { border-top: 5px solid #17a2b8; background: #f0fbfc; color: #17a2b8; }
+        .hidden { display: none; }
+        .test-box { background: white; padding: 20px; border-radius: 10px; margin-top: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        .back-btn { background: #6c757d; color: white; padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer; margin-bottom: 15px; font-weight: bold; }
+        .logout-btn { background: #dc3545; color: white; border: none; padding: 6px 12px; cursor: pointer; border-radius: 4px; font-size: 12px; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h2 id="welcomeMsg">Welcome!</h2>
+        <button class="logout-btn" onclick="localStorage.clear(); window.location.href='index.html';">Logout</button>
+    </div>
+
+    <button id="backBtn" class="back-btn hidden" onclick="goBack()">⬅️ Back</button>
+
+    <div id="mainTitle"><h3>Apna Course Chunein</h3></div>
+    <div id="displayGrid" class="grid-container"></div>
+
+    <!-- Active Live Test -->
+    <div id="testSection" class="test-box hidden">
+        <h2 id="activeTestTitle" style="color: #004085;"></h2>
+        <div id="questionArea"></div>
+        <button onclick="submitTest()" style="background: #28a745; color:white; padding: 12px 25px; border:none; border-radius:6px; cursor:pointer; font-size:16px; font-weight:bold; width:100%; margin-top:15px;">Submit Test</button>
+    </div>
+
+    <script>
+        let allData = [];
+        let currentLevel = 'courses'; 
+        let selectedCourse = null;
+        let selectedSubject = null;
+        let activeQuestions = [];
+
+        async function loadDashboard() {
+            const student = JSON.parse(localStorage.getItem('student'));
+            if(!student) { window.location.href = 'index.html'; return; }
+            document.getElementById('welcomeMsg').innerText = `👤 ${student.name}`;
+
+            const res = await fetch('/api/content');
+            allData = await res.json();
+            renderCourses();
+        }
+
+        function renderCourses() {
+            currentLevel = 'courses';
+            document.getElementById('backBtn').classList.add('hidden');
+            document.getElementById('testSection').classList.add('hidden');
+            document.getElementById('displayGrid').classList.remove('hidden');
+            document.getElementById('mainTitle').innerHTML = "<h3>🏢 Available Courses</h3>";
+            
+            const grid = document.getElementById('displayGrid');
+            grid.innerHTML = '';
+            allData.forEach(c => {
+                grid.innerHTML += `<div class="card course-card" onclick="selectCourse(${c.id})">📚 ${c.name}</div>`;
+            });
+        }
+
+        function selectCourse(cId) {
+            selectedCourse = allData.find(c => c.id === cId);
+            currentLevel = 'subjects';
+            document.getElementById('backBtn').classList.remove('hidden');
+            document.getElementById('mainTitle').innerHTML = "<h3>📖 Select Subject</h3>";
+            
+            const grid = document.getElementById('displayGrid');
+            grid.innerHTML = '';
+            selectedCourse.subjects.forEach(s => {
+                grid.innerHTML += `<div class="card subject-card" onclick="selectSubject(${s.id})">📘 ${s.name}</div>`;
+            });
+        }
+
+        function selectSubject(sId) {
+            selectedSubject = selectedCourse.subjects.find(s => s.id === sId);
+            currentLevel = 'tests';
+            document.getElementById('mainTitle').innerHTML = "<h3>📝 Select Test</h3>";
+            
+            const grid = document.getElementById('displayGrid');
+            grid.innerHTML = '';
+            selectedSubject.tests.forEach(t => {
+                grid.innerHTML += `
+                    <div class="card test-card" onclick="startTest(${t.id})">
+                        ✏️ ${t.name} <br>
+                        <span style="font-size:11px; color:#666; font-weight:normal;">Qs: ${t.questions.length}</span>
+                    </div>`;
+            });
+        }
+
+        function startTest(tId) {
+            const test = selectedSubject.tests.find(t => t.id === tId);
+            activeQuestions = test.questions;
+            currentLevel = 'active-test';
+
+            document.getElementById('displayGrid').classList.add('hidden');
+            document.getElementById('testSection').classList.remove('hidden');
+            document.getElementById('activeTestTitle').innerText = test.name;
+
+            const qArea = document.getElementById('questionArea');
+            qArea.innerHTML = '';
+            if(activeQuestions.length === 0) {
+                qArea.innerHTML = '<p style="color:red;">Is test me koi sawal nahi hai.</p>';
+                return;
+            }
+
+            activeQuestions.forEach((q, index) => {
+                qArea.innerHTML += `
+                    <div style="margin-bottom: 15px; padding: 12px; background:#fafafa; border-radius:6px; border:1px solid #eee;">
+                        <p><strong>Q${index+1}: ${q.qText}</strong></p>
+                        <label><input type="radio" name="q${index}" value="A"> A) ${q.options[0]}</label><br><br>
+                        <label><input type="radio" name="q${index}" value="B"> B) ${q.options[1]}</label>
+                    </div>`;
+            });
+        }
+
+        function submitTest() {
+            let score = 0;
+            activeQuestions.forEach((q, index) => {
+                const selected = document.querySelector(`input[name="q${index}"]:checked`);
+                if(selected && selected.value === q.ans) {
+                    score++;
+                }
+            });
+            alert(`🎉 Test Completed!\nAapka Total Score: ${score} / ${activeQuestions.length}`);
+            renderCourses();
+        }
+
+        function goBack() {
+            if (currentLevel === 'subjects') renderCourses();
+            else if (currentLevel === 'tests') selectCourse(selectedCourse.id);
+            else if (currentLevel === 'active-test') selectSubject(selectedSubject.id);
+        }
+
+        window.onload = loadDashboard;
+    </script>
+</body>
+</html>
