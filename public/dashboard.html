@@ -17,7 +17,7 @@
         .grid-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; margin-top: 15px; }
         .card { background: var(--box-bg); padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); cursor: pointer; text-align: center; font-weight: bold; }
         
-        /* Course Name Bada Karne Ke Liye Styles */
+        /* Course Name Card Styles */
         .course-card { border-top: 5px solid #28a745; color: #28a745; font-size: 18px !important; padding: 25px 15px; }
         
         .subject-card { border-top: 4px solid #ffc107; color: #b78a00; }
@@ -30,7 +30,8 @@
         table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size:13px; }
         th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
         th { background: rgba(0,0,0,0.05); }
-        .table-select { padding: 4px; font-size: 12px; width: 100%; max-width: 150px; margin-top: 4px; border-radius: 4px; border: 1px solid #ccc; }
+        .table-select { padding: 4px; font-size: 12px; width: 100%; max-width: 150px; margin-top: 4px; border-radius: 4px; border: 1px solid #ccc; box-sizing: border-box; }
+        .table-input { padding: 4px; font-size: 12px; width: 100%; max-width: 150px; margin-top: 4px; border-radius: 4px; border: 1px solid #ccc; box-sizing: border-box; }
         .theme-btn { background: none; border: none; font-size: 20px; cursor: pointer; }
     </style>
 </head>
@@ -52,16 +53,20 @@
         <div id="mainTitle"><h3>Apna Course Select Karein</h3></div>
         <div id="displayGrid" class="grid-container"></div>
 
+        <!-- PUBLIC RANK LEADERBOARD (WITH DEPENDENT DROPDOWN FILTERS) -->
         <div class="box" style="background: rgba(255,152,0,0.05); border:1px solid #f5e4cc;">
             <h3>🏆 Public Rank Leaderboard (Names Only)</h3>
             <table id="studentLeaderboardTable">
                 <thead>
                     <tr>
                         <th>Rank</th>
-                        <th>Student Name</th>
+                        <th>
+                            Student Name <br>
+                            <input type="text" id="filterName" class="table-input" placeholder="Type Name..." onkeyup="filterLeaderboard()">
+                        </th>
                         <th>
                             Subject <br>
-                            <select id="filterSubject" class="table-select" onchange="filterLeaderboard()"><option value="">All Subjects</option></select>
+                            <select id="filterSubject" class="table-select" onchange="updateTestDropdownAndFilter()"><option value="">All Subjects</option></select>
                         </th>
                         <th>
                             Test Name <br>
@@ -94,7 +99,7 @@
     <script>
         let allData = [], currentLevel = 'courses', selectedCourse = null, selectedSubject = null, activeQuestions = [], timerInterval = null, totalSecondsLeft = 0, currentTestId = '', currentTestName = '';
         let tabCheatCount = 0, isTestActive = false, answersCache = {};
-        let originalLeaderboardData = []; // To hold raw leaderboard items for live filtering
+        let originalLeaderboardData = []; 
 
         async function init() {
             const student = JSON.parse(localStorage.getItem('student')); if(!student) { window.location.href = 'index.html'; return; }
@@ -108,10 +113,8 @@
         function toggleTheme() { document.body.classList.toggle('dark-theme'); localStorage.setItem('theme', document.body.classList.contains('dark-theme') ? 'dark' : 'light'); }
         async function loadNotice() { const res = await fetch('/api/notice'); const d = await res.json(); document.getElementById('noticeText').innerText = d.notice || "CGTS Live Test Engine Open."; }
 
-        // Auto-Save Offline Resiliency Protection Cache Hook
         function trackOfflineCache(qIndex, val) { answersCache[`q_${currentTestId}_${qIndex}`] = val; localStorage.setItem('offline_answers', JSON.stringify(answersCache)); }
 
-        // Anti-Cheating Control
         document.addEventListener('visibilitychange', () => { if (isTestActive && document.hidden) { tabCheatCount++; if (tabCheatCount === 1) alert("⚠️ WARNING: Cheating Not Allowed! Agli baar tab change kiya toh automatic submit hoga."); else if (tabCheatCount >= 2) { alert("🚨 TEST TERMINATED!"); submitTest(); } } });
 
         function renderCourses() {
@@ -190,32 +193,52 @@
             await fetch('/api/test/submit', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ studentName: student.name, mobile: student.mobile, testId: currentTestId, testName: currentTestName, score: finalScore.toFixed(2), totalQs: activeQuestions.length }) });
         }
 
-        // Leaderboard Data Handler with Dropdown filter populator
         async function loadLeaderboard() {
             const res = await fetch('/api/leaderboard'); originalLeaderboardData = await res.json();
             
             let subjects = new Set();
-            let tests = new Set();
-
             originalLeaderboardData.forEach(l => {
                 let parts = l.testName.split(' | ');
                 l.extractedSubject = parts[0] || 'General';
                 l.extractedTest = parts[1] || l.testName;
                 subjects.add(l.extractedSubject);
-                tests.add(l.extractedTest);
             });
 
-            // Fill Dropdown filters
+            // Pehle sirf Subject dropdown populate karein
             const subFilter = document.getElementById('filterSubject');
-            const testFilter = document.getElementById('filterTest');
-            
             subFilter.innerHTML = '<option value="">All Subjects</option>';
+            subjects.forEach(s => subFilter.innerHTML += `<option value="${s}">${s}</option>`);
+
+            // Shuruat mein saare tests load karein
+            buildTestDropdown(""); 
+            displayLeaderboard(originalLeaderboardData);
+        }
+
+        // Selected Subject ke hisab se Test dropdown filter karne ka function
+        function buildTestDropdown(selectedSubject) {
+            const testFilter = document.getElementById('filterTest');
             testFilter.innerHTML = '<option value="">All Tests</option>';
 
-            subjects.forEach(s => subFilter.innerHTML += `<option value="${s}">${s}</option>`);
-            tests.forEach(t => testFilter.innerHTML += `<option value="${t}">${t}</option>`);
+            let tests = new Set();
+            originalLeaderboardData.forEach(l => {
+                if (selectedSubject === "" || l.extractedSubject === selectedSubject) {
+                    tests.add(l.extractedTest);
+                }
+            });
 
-            displayLeaderboard(originalLeaderboardData);
+            tests.forEach(t => testFilter.innerHTML += `<option value="${t}">${t}</option>`);
+        }
+
+        // Jab subject badlega tab ye trigger hoga
+        function updateTestDropdownAndFilter() {
+            const subVal = document.getElementById('filterSubject').value;
+            
+            // Test dropdown ko filter ke hisab se update karein aur selection clear karein
+            buildTestDropdown(subVal);
+            document.getElementById('filterTest').value = ""; 
+
+            // Table re-filter karein
+            filterLeaderboard();
         }
 
         function displayLeaderboard(data) {
@@ -229,15 +252,17 @@
             });
         }
 
-        // Live Frontend Filtering Engine
+        // Live Combined Core Filter
         function filterLeaderboard() {
+            const nameVal = document.getElementById('filterName').value.toLowerCase().trim();
             const subVal = document.getElementById('filterSubject').value;
             const testVal = document.getElementById('filterTest').value;
 
             const filtered = originalLeaderboardData.filter(l => {
+                const matchName = (nameVal === "" || l.studentName.toLowerCase().includes(nameVal));
                 const matchSub = (subVal === "" || l.extractedSubject === subVal);
                 const matchTest = (testVal === "" || l.extractedTest === testVal);
-                return matchSub && matchTest;
+                return matchName && matchSub && matchTest;
             });
 
             displayLeaderboard(filtered);
