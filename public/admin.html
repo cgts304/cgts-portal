@@ -1,22 +1,202 @@
-<div class="box">
-    <h3>📋 All Students Test Submissions (Admin View)</h3>
-    <table>
-        <thead>
-            <tr>
-                <th>Student Name</th>
-                <th>Mobile</th>
-                <th>
-                    Subject Name <br>
-                    <select id="adminSubDrop" onchange="filterAdminTable(2, this.value)"><option value="">All</option></select>
-                </th>
-                <th>
-                    Test Name <br>
-                    <select id="adminTestDrop" onchange="filterAdminTable(3, this.value)"><option value="">All</option></select>
-                </th>
-                <th>Score</th>
-                <th>Date</th>
-            </tr>
-        </thead>
-        <tbody id="adminResultTable"></tbody>
-    </table>
-</div>
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CGTS Admin Dashboard</title>
+    <style>
+        :root { --bg: #f1f5f9; --text: #0f172a; --box-bg: #ffffff; --primary: #0284c7; --sh: 0 10px 15px -3px rgba(0,0,0,0.05); }
+        body { font-family: system-ui, sans-serif; margin: 20px; background: var(--bg); color: var(--text); }
+        .header { background: #0f172a; color: white; padding: 20px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; box-shadow: var(--sh); }
+        .box { background: var(--box-bg); padding: 25px; border-radius: 12px; margin-top: 25px; box-shadow: var(--sh); }
+        h3 { margin-top: 0; font-size: 20px; border-left: 5px solid var(--primary); padding-left: 10px; }
+        
+        /* Form & Inputs */
+        .form-group { margin-bottom: 15px; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; }
+        input[type="text"], textarea, select { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; box-sizing: border-box; font-size: 14px; }
+        button { background: var(--primary); color: white; border: none; padding: 10px 20px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s; }
+        button:hover { opacity: 0.9; }
+        
+        /* Stats Widget */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-top: 20px; }
+        .stat-card { background: #e0f2fe; padding: 20px; border-radius: 8px; text-align: center; border-left: 5px solid #0369a1; }
+        .stat-card h4 { margin: 0; color: #0369a1; font-size: 14px; text-transform: uppercase; }
+        .stat-card p { margin: 10px 0 0 0; font-size: 28px; font-weight: bold; }
+
+        /* Admin Table & Filters */
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; background: var(--box-bg); }
+        th, td { border: 1px solid #e2e8f0; padding: 12px; text-align: left; font-size: 14px; }
+        th { background: #f8fafc; color: #475569; }
+        .table-select { width: 100%; padding: 6px; margin-top: 5px; border-radius: 4px; border: 1px solid #cbd5e1; background: #fff; font-weight: normal; }
+        .search-bar { margin-bottom: 15px; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h2>🛠️ CGTS Central Control Admin Panel</h2>
+        <button style="background:#ef4444;" onclick="localStorage.clear(); location.href='index.html';">Secure Logout</button>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <h4>Total Test Submissions</h4>
+            <p id="totalCount">0</p>
+        </div>
+        <div class="stat-card" style="background:#dcfce7; border-left-color:#15803d;">
+            <h4>Unique Subjects Active</h4>
+            <p id="totalSubs" style="color:#15803d;">0</p>
+        </div>
+    </div>
+
+    <div class="box">
+        <h3>📢 Update Student Notice Banner</h3>
+        <div class="form-group" style="margin-top:15px;">
+            <label for="noticeInput">Marquee Text (Jo students ko live dikhega):</label>
+            <textarea id="noticeInput" rows="2" placeholder="Yahan naya notice likhein..."></textarea>
+        </div>
+        <button onclick="updateNotice()">🚀 Broadcast Notice</button>
+    </div>
+
+    <div class="box">
+        <h3>📊 Student Response & Results Database</h3>
+        <div class="search-bar">
+            <input type="text" id="adminSearchInput" placeholder="🔍 Student Name ya Mobile number se direct filter karein..." onkeyup="searchAdminTable()">
+        </div>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>Student Name</th>
+                    <th>Mobile Number</th>
+                    <th>
+                        Subject Name <br>
+                        <select id="adminSubDrop" class="table-select" onchange="filterAdminTable(2, this.value)"><option value="">All Subjects</option></select>
+                    </th>
+                    <th>
+                        Test Name <br>
+                        <select id="adminTestDrop" class="table-select" onchange="filterAdminTable(3, this.value)"><option value="">All Tests</option></select>
+                    </th>
+                    <th>Obtained Score</th>
+                    <th>Date & Time</th>
+                </tr>
+            </thead>
+            <tbody id="adminResultTable">
+                <tr><td colspan="6" style="text-align:center; color:#64748b;">Loading records from database...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        const $ = id => document.getElementById(id);
+        let rawSubmissionList = [];
+
+        async function initAdmin() {
+            // Check authorization if necessary, then pull metrics
+            await loadCurrentNotice();
+            await loadAdminResults();
+        }
+
+        // 1. Fetch current announcement text
+        async function loadCurrentNotice() {
+            try {
+                const res = await fetch('/api/notice');
+                const d = await res.json();
+                if(d.notice) $('noticeInput').value = d.notice;
+            } catch(e) { console.error("Notice fetch failed", e); }
+        }
+
+        // 2. Broadcast new text announcement
+        async function updateNotice() {
+            const txt = $('noticeInput').value.trim();
+            if(!txt) return alert("Notice khali nahi ho sakta!");
+            try {
+                const res = await fetch('/api/notice', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ notice: txt })
+                });
+                if(res.ok) alert("🎉 Notice successfully updated on student panel!");
+            } catch(e) { alert("Error updating notice"); }
+        }
+
+        // 3. Main Result Load Routine with Multi-column splitting
+        async function loadAdminResults() {
+            try {
+                const res = await fetch('/api/leaderboard'); // Ya jo bhi aapka all submissions fetch API endpoint ho
+                rawSubmissionList = await res.json();
+                
+                let uniqueSubs = new Set(), uniqueTests = new Set();
+                
+                if(!rawSubmissionList.length) {
+                    $('adminResultTable').innerHTML = `<tr><td colspan="6" style="text-align:center;">Abhi koi data available nahi hai.</td></tr>`;
+                    return;
+                }
+
+                $('adminResultTable').innerHTML = rawSubmissionList.map(l => {
+                    // String structure split mapping "Subject Name | Test Name"
+                    let parts = l.testName.split(' | ');
+                    let subName = parts[0] || 'N/A';
+                    let testRealName = parts[1] || l.testName;
+
+                    uniqueSubs.add(subName);
+                    uniqueTests.add(testRealName);
+
+                    return `<tr>
+                        <td><b>${l.studentName}</b></td>
+                        <td>${l.mobile || 'N/A'}</td>
+                        <td class="sub-col">${subName}</td>
+                        <td class="test-col">${testRealName}</td>
+                        <td><mark style="font-weight:bold; background:#fef08a; padding:2px 6px; border-radius:4px;">${l.score}</mark></td>
+                        <td><small style="color:#64748b;">${l.date}</small></td>
+                    </tr>`;
+                }).join('');
+
+                // Update Stats Counter cards
+                $('totalCount').innerText = rawSubmissionList.length;
+                $('totalSubs').innerText = uniqueSubs.size;
+
+                // Sync UI filtering dropdown components
+                populateAdminFilter('adminSubDrop', uniqueSubs);
+                populateAdminFilter('adminTestDrop', uniqueTests);
+
+            } catch(e) {
+                $('adminResultTable').innerHTML = `<tr><td colspan="6" style="text-align:center; color:red; font-weight:bold;">Database connection failed!</td></tr>`;
+            }
+        }
+
+        function populateAdminFilter(id, dataset) {
+            const el = $(id);
+            el.innerHTML = `<option value="">All Dynamic Filter</option>`;
+            dataset.forEach(item => el.innerHTML += `<option value="${item}">${item}</option>`);
+        }
+
+        // 4. Dropdown filter core matrix algorithm
+        function filterAdminTable(colIndex, val) {
+            const rows = document.querySelectorAll("#adminResultTable tr");
+            rows.forEach(row => {
+                const cellText = row.children[colIndex] ? row.children[colIndex].innerText.trim() : '';
+                // Dynamic visibility trigger logic
+                if(val === "" || cellText === val) {
+                    row.style.display = "";
+                } else {
+                    row.style.display = "none";
+                }
+            });
+        }
+
+        // 5. Global Search Box input bar modifier
+        function searchAdminTable() {
+            const searchVal = $('adminSearchInput').value.toLowerCase();
+            const rows = document.querySelectorAll("#adminResultTable tr");
+            rows.forEach(row => {
+                const text = row.innerText.toLowerCase();
+                row.style.display = text.includes(searchVal) ? "" : "none";
+            });
+        }
+
+        window.onload = initAdmin;
+    </script>
+</body>
+</html>
