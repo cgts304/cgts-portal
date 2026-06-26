@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CGTS Admin Control Panel</title>
+    <title>CGTS Admin Panel</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 15px; background: #f4f6f9; color: #333; }
         .header-bar { background: #004085; color: white; padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .header-bar h1 { margin: 0; font-size: 22px; }
-        .logout-btn { background: #dc3545; color: white; border: none; padding: 8px 15px; cursor: pointer; border-radius: 4px; font-weight: bold; font-size: 14px; }
+        .logout-btn { background: #dc3545; color: white; border: none; padding: 8px 15px; cursor: pointer; border-radius: 4px; font-weight: bold; }
         .section { background: white; padding: 15px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
         h2 { font-size: 18px; border-bottom: 2px solid #004085; padding-bottom: 5px; color: #004085; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
@@ -17,7 +17,6 @@
         button { padding: 6px 10px; cursor: pointer; border-radius: 4px; border: none; font-size: 12px; font-weight: bold; margin: 2px; }
         .btn-app { background: #28a745; color: white; }
         .btn-del { background: #dc3545; color: white; }
-        .form-group { margin: 10px 0; padding: 10px; background: #fafafa; border-radius: 5px; border: 1px solid #e1e4e8; }
         input, select, textarea { padding: 8px; margin: 5px 0; width: 100%; box-sizing: border-box; border-radius: 4px; border: 1px solid #ccc; }
         .ai-box { background: #e8f0fe; padding: 15px; border-radius: 6px; border: 2px dashed #1a73e8; margin-top: 10px; }
     </style>
@@ -26,120 +25,120 @@
 
     <div class="header-bar">
         <h1>CGTS Admin Control Panel</h1>
-        <button class="logout-btn" onclick="adminLogout()">🔒 Logout</button>
+        <button class="logout-btn" onclick="localStorage.clear(); window.location.href='index.html';">🔒 Logout</button>
+    </div>
+
+    <div class="section" style="background: #eef9ff; border: 1px solid #bce1f5;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h2>🏆 Global Leaderboard (Admin Copy: Names & Numbers Visible)</h2>
+            <button class="btn-app" style="background: #007bff;" onclick="downloadExcel()">Export To CSV (Excel)</button>
+        </div>
+        <table id="adminLeaderboardTable">
+            <thead>
+                <tr><th>Rank</th><th>Student Name</th><th>Mobile No</th><th>Exam/Test Name</th><th>Score Achieved</th><th>Date</th></tr>
+            </thead>
+            <tbody></tbody>
+        </table>
     </div>
 
     <div class="section">
-        <h2>Student Approvals (Naam, Mobile, Password List)</h2>
-        <div style="overflow-x:auto;">
-            <table id="studentTable">
-                <thead>
-                    <tr>
-                        <th>Naam</th>
-                        <th>Mobile</th>
-                        <th>Password</th>
-                        <th>Status</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
+        <h2>Student Management & Approvals</h2>
+        <table id="studentTable">
+            <thead>
+                <tr><th>Naam</th><th>Mobile</th><th>Password</th><th>Status</th><th>Action</th></tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <div class="section">
+        <h2>Create Test Structure</h2>
+        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:15px;">
+            <div style="background:#f9f9f9; padding:10px; border-radius:5px;">
+                <h3>1. Add Course</h3>
+                <input type="text" id="courseName" placeholder="Course Name">
+                <button class="btn-app" onclick="manageCourse('create')">Save Course</button>
+            </div>
+            <div style="background:#f9f9f9; padding:10px; border-radius:5px;">
+                <h3>2. Add Subject</h3>
+                <select id="courseSelect" onchange="loadAdminContent()"></select>
+                <input type="text" id="subjectName" placeholder="Subject Name">
+                <button class="btn-app" onclick="manageSubject('create')">Save Subject</button>
+            </div>
+            <div style="background:#f9f9f9; padding:10px; border-radius:5px;">
+                <h3>3. Add Test Name</h3>
+                <select id="subjectSelect"></select>
+                <input type="text" id="testName" placeholder="Test Name">
+                <button class="btn-app" onclick="manageTest('create')">Save Test</button>
+            </div>
         </div>
     </div>
 
     <div class="section">
-        <h2>Create Test Content</h2>
-        <div class="form-group">
-            <h3>1. Course Banayein</h3>
-            <input type="text" id="courseName" placeholder="Course Name">
-            <button class="btn-app" onclick="manageCourse('create')">Create Course</button>
-        </div>
-        <div class="form-group">
-            <h3>2. Subject Banayein</h3>
-            <select id="courseSelect" onchange="loadAdminContent()"></select>
-            <input type="text" id="subjectName" placeholder="Subject Name">
-            <button class="btn-app" onclick="manageSubject('create')">Add Subject</button>
-        </div>
-        <div class="form-group">
-            <h3>3. Test Name Add Karein</h3>
-            <select id="subjectSelect"></select>
-            <input type="text" id="testName" placeholder="Test Name (e.g., Mock Test 1)">
-            <button class="btn-app" onclick="manageTest('create')">Add Test</button>
-        </div>
-    </div>
-
-    <div class="section">
-        <h2>Live Content Tree</h2>
-        
+        <h2>Live Content Management Tree</h2>
         <div id="aiFormContainer" class="ai-box" style="display: none;">
-            <h3 style="margin-top: 0; color: #1a73e8;">🤖 Custom JSON Bulk Questions Uploader</h3>
-            <input type="hidden" id="targetCourseId">
-            <input type="hidden" id="targetSubjectId">
-            <input type="hidden" id="targetTestId">
-            <p id="targetTestName" style="font-weight: bold; color: #333;"></p>
-
-            <textarea id="aiBulkText" rows="12" placeholder='Yahan apna [ { "question": "..." } ] poora format paste karein...'></textarea>
-            
-            <button class="btn-app" style="background: #1a73e8;" onclick="processCustomFormatSubmission()">⚡ Upload 30+ Questions Instantly</button>
-            <button class="btn-hide" style="background:#6c757d; color:white;" onclick="closeAIForm()">Cancel</button>
+            <h3 id="targetTestName" style="margin:0 0 10px 0; color: #1a73e8;">🤖 Custom JSON Bulk Question Uploader</h3>
+            <input type="hidden" id="targetCourseId"><input type="hidden" id="targetSubjectId"><input type="hidden" id="targetTestId">
+            <textarea id="aiBulkText" rows="10" placeholder='Paste [ { "question": "...", "a": "...", "b": "...", "c": "...", "d": "...", "ans": "b", "vyakhya": "..." } ]'></textarea>
+            <button class="btn-app" onclick="processCustomFormatSubmission()">⚡ Bulk Upload Now</button>
+            <button class="btn-del" onclick="closeAIForm()">Cancel</button>
         </div>
-
         <div id="contentTree" style="margin-top: 15px;"></div>
     </div>
 
     <script>
-        async function loadAll() { loadStudents(); loadAdminContent(); }
+        async function loadAll() { loadStudents(); loadAdminContent(); loadLeaderboard(); }
 
-        // Students load karne ka function (Ab yahan password saaf dikhega s.password se)
         async function loadStudents() {
             const res = await fetch('/api/admin/students');
             const students = await res.json();
             const tbody = document.querySelector('#studentTable tbody');
             tbody.innerHTML = '';
-
             students.forEach(s => {
-                tbody.innerHTML += `<tr>
-                    <td>${s.name}</td>
-                    <td>${s.mobile}</td>
-                    <td style="color: #d63384; font-weight: bold;">${s.password}</td>
-                    <td><mark>${s.status.toUpperCase()}</mark></td>
-                    <td>
-                        <button class="btn-app" onclick="updateStatus(${s.id}, 'approved')">Approve</button> 
-                        <button class="btn-del" onclick="updateStatus(${s.id}, 'delete')">Delete</button>
-                    </td>
-                </tr>`;
+                tbody.innerHTML += `<tr><td>${s.name}</td><td>${s.mobile}</td><td style="color:#d63384; font-weight:bold;">${s.password}</td><td><mark>${s.status.toUpperCase()}</mark></td><td><button class="btn-app" onclick="updateStatus(${s.id}, 'approved')">Approve</button> <button class="btn-del" onclick="updateStatus(${s.id}, 'delete')">Delete</button></td></tr>`;
             });
         }
 
-        async function updateStatus(id, status) {
-            await fetch('/api/admin/student-status', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, status }) });
-            loadAll();
+        async function loadLeaderboard() {
+            const res = await fetch('/api/leaderboard');
+            const list = await res.json();
+            const tbody = document.querySelector('#adminLeaderboardTable tbody');
+            tbody.innerHTML = '';
+            list.forEach((l, index) => {
+                tbody.innerHTML += `<tr><td><b>#${index+1}</b></td><td>${l.studentName}</td><td>${l.mobile}</td><td>${l.testName}</td><td><mark><b>${l.score}</b> / ${l.totalQs}</mark></td><td>${l.date}</td></tr>`;
+            });
         }
 
-        async function loadAdminContent() {
-            const res = await fetch('/api/admin/content');
-            const courses = await res.json();
-            const courseSelect = document.getElementById('courseSelect');
-            const subjectSelect = document.getElementById('subjectSelect');
-            const contentTree = document.getElementById('contentTree');
-            const selectedCVal = courseSelect.value;
-            courseSelect.innerHTML = ''; subjectSelect.innerHTML = ''; contentTree.innerHTML = '';
+        function downloadExcel() {
+            let csv = "Rank,Student Name,Mobile Number,Test Name,Score,Date\n";
+            const rows = document.querySelectorAll("#adminLeaderboardTable tbody tr");
+            rows.forEach(tr => {
+                const cells = tr.querySelectorAll("td");
+                csv += `"${cells[0].innerText}","${cells[1].innerText}","${cells[2].innerText}","${cells[3].innerText}","${cells[4].innerText}","${cells[5].innerText}"\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob); link.setAttribute("download", "CGTS_Leaderboard.csv");
+            document.body.appendChild(link); link.click(); document.body.removeChild(link);
+        }
 
+        async function updateStatus(id, status) { await fetch('/api/admin/student-status', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, status }) }); loadAll(); }
+        async function loadAdminContent() {
+            const res = await fetch('/api/admin/content'); const courses = await res.json();
+            const courseSelect = document.getElementById('courseSelect'); const subjectSelect = document.getElementById('subjectSelect'); const contentTree = document.getElementById('contentTree');
+            const selectedCVal = courseSelect.value; courseSelect.innerHTML = ''; subjectSelect.innerHTML = ''; contentTree.innerHTML = '';
             courses.forEach(c => {
-                const opt = document.createElement('option'); opt.value = c.id; opt.innerText = c.name;
-                if(c.id == selectedCVal) opt.selected = true;
-                courseSelect.appendChild(opt);
-                
-                let subjectHTML = '';
+                const opt = document.createElement('option'); opt.value = c.id; opt.innerText = c.name; if(c.id == selectedCVal) opt.selected = true; courseSelect.appendChild(opt);
+                let subHTML = '';
                 c.subjects.forEach(s => {
                     if(courseSelect.value == c.id) subjectSelect.innerHTML += `<option value="${s.id}">${s.name}</option>`;
                     let testHTML = '';
                     s.tests.forEach(t => {
-                        testHTML += `<div style="margin-left: 20px; background: #fff3cd; padding: 8px; margin-top:5px; border-radius:4px;">📝 Test: <b>${t.name}</b> | Qs: ${t.questions.length} <br><button class="btn-del" onclick="deleteTest(${c.id}, ${s.id}, ${t.id})">Delete</button> <button class="btn-app" style="background:#1a73e8; color:white;" onclick="openAIForm(${c.id}, ${s.id}, ${t.id}, '${t.name}')">🤖 Upload Custom JSON</button></div>`;
+                        testHTML += `<div style="margin-left:20px; background:#fff3cd; padding:6px; margin-top:5px; border-radius:4px;">📝 ${t.name} (Qs: ${t.questions.length}) <br><button class="btn-del" onclick="deleteTest(${c.id}, ${s.id}, ${t.id})">Delete</button> <button class="btn-app" style="background:#1a73e8;" onclick="openAIForm(${c.id}, ${s.id}, ${t.id}, '${t.name}')">🤖 Upload Custom JSON</button></div>`;
                     });
-                    subjectHTML += `<div style="margin-left: 15px; background: #e2e3e5; padding: 8px; margin-top:5px; border-radius:4px;">📚 Subject: <b>${s.name}</b> <br><button class="btn-del" onclick="deleteSubject(${c.id}, ${s.id})">Delete</button>${testHTML}</div>`;
+                    subHTML += `<div style="margin-left:15px; background:#e2e3e5; padding:6px; margin-top:5px; border-radius:4px;">📚 Subject: <b>${s.name}</b> <br><button class="btn-del" onclick="deleteSubject(${c.id}, ${s.id})">Delete</button>${testHTML}</div>`;
                 });
-                contentTree.innerHTML += `<div style="background: #d1ecf1; padding: 10px; margin-top: 10px; border-radius: 4px;">🏢 Course: <strong>${c.name}</strong> <br><button class="btn-del" onclick="deleteCourse(${c.id})">Delete</button>${subjectHTML}</div>`;
+                contentTree.innerHTML += `<div style="background:#d1ecf1; padding:8px; margin-top:10px; border-radius:4px;">🏢 Course: <b>${c.name}</b> <br><button class="btn-del" onclick="deleteCourse(${c.id})">Delete</button>${subHTML}</div>`;
             });
         }
 
@@ -150,49 +149,21 @@
         async function manageTest(action, tId) { const courseId = parseInt(document.getElementById('courseSelect').value); const subjectId = parseInt(document.getElementById('subjectSelect').value); const name = document.getElementById('testName').value; await fetch('/api/admin/test', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, courseId, subjectId, testId: tId, name }) }); document.getElementById('testName').value = ''; loadAdminContent(); }
         async function deleteTest(cId, sId, tId) { await fetch('/api/admin/test', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'delete', courseId: cId, subjectId: sId, testId: tId }) }); loadAdminContent(); }
 
-        function openAIForm(cId, sId, tId, testName) {
-            document.getElementById('targetCourseId').value = cId;
-            document.getElementById('targetSubjectId').value = sId;
-            document.getElementById('targetTestId').value = tId;
-            document.getElementById('targetTestName').innerText = "Target Test: " + testName;
-            document.getElementById('aiFormContainer').style.display = 'block';
-            window.scrollTo(0, 0);
-        }
-
-        function closeAIForm() { document.getElementById('aiFormContainer').style.display = 'none'; document.getElementById('aiBulkText').value = ''; }
+        function openAIForm(cId, sId, tId, name) { document.getElementById('targetCourseId').value = cId; document.getElementById('targetSubjectId').value = sId; document.getElementById('targetTestId').value = tId; document.getElementById('targetTestName').innerText = "Target Test: " + name; document.getElementById('aiFormContainer').style.display='block'; window.scrollTo(0,0); }
+        function closeAIForm() { document.getElementById('aiFormContainer').style.display='none'; document.getElementById('aiBulkText').value=''; }
 
         async function processCustomFormatSubmission() {
-            const cId = parseInt(document.getElementById('targetCourseId').value);
-            const sId = parseInt(document.getElementById('targetSubjectId').value);
-            const tId = parseInt(document.getElementById('targetTestId').value);
-            let rawText = document.getElementById('aiBulkText').value.trim();
-
-            if(!rawText) return alert("Pehle Data paste karein!");
+            const cId = parseInt(document.getElementById('targetCourseId').value); const sId = parseInt(document.getElementById('targetSubjectId').value); const tId = parseInt(document.getElementById('targetTestId').value);
+            let rawText = document.getElementById('aiBulkText').value.trim(); if(!rawText) return alert("Paste text!");
             let inputList = [];
-            try {
-                if(rawText.startsWith("```")) rawText = rawText.replace(/^```[a-zA-Z]*\n/, "").replace(/\n```$/, "");
-                inputList = Function('"use strict";return (' + rawText + ')')();
-            } catch (e) { return alert("⚠️ Code Format error!"); }
-
-            let parsedQuestions = inputList.map(item => {
-                return { qText: item.question, options: [item.a, item.b, item.c, item.d], ans: (item.ans || 'A').toUpperCase().trim(), vyakhya: item.vyakhya || 'Koi vyakhya nahi hai.' };
-            });
-
-            const res = await fetch('/api/content');
-            const data = await res.json();
+            try { if(rawText.startsWith("```")) rawText = rawText.replace(/^```[a-zA-Z]*\n/, "").replace(/\n```$/, ""); inputList = Function('"use strict";return (' + rawText + ')')(); } catch(e) { return alert("Format Error!"); }
+            let parsed = inputList.map(item => { return { qText: item.question, options: [item.a, item.b, item.c, item.d], ans: (item.ans||'A').toUpperCase().trim(), vyakhya: item.vyakhya||'' }; });
+            const res = await fetch('/api/content'); const data = await res.json();
             const test = data.find(c => c.id === cId).subjects.find(s => s.id === sId).tests.find(t => t.id === tId);
-            test.questions = test.questions.concat(parsedQuestions);
-
+            test.questions = test.questions.concat(parsed);
             await fetch('/api/admin/test', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'update-questions', courseId: cId, subjectId: sId, testId: tId, questions: test.questions }) });
-            alert("Upload Success!"); closeAIForm(); loadAdminContent();
+            alert("Success!"); closeAIForm(); loadAdminContent();
         }
-
-        // Admin Logout Functionality
-        function adminLogout() {
-            localStorage.removeItem('adminToken'); // Token clear karne ke liye
-            window.location.href = 'index.html'; // Login page par redirect
-        }
-
         window.onload = loadAll;
     </script>
 </body>
