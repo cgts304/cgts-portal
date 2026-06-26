@@ -3,10 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CGTS Admin Control - Advanced Security</title>
+    <title>CGTS Admin Control Panel</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 15px; background: #f4f6f9; color: #333; }
-        h1 { color: #004085; font-size: 24px; text-align: center; }
+        .header-bar { background: #004085; color: white; padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .header-bar h1 { margin: 0; font-size: 22px; }
+        .logout-btn { background: #dc3545; color: white; border: none; padding: 8px 15px; cursor: pointer; border-radius: 4px; font-weight: bold; font-size: 14px; }
         .section { background: white; padding: 15px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
         h2 { font-size: 18px; border-bottom: 2px solid #004085; padding-bottom: 5px; color: #004085; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
@@ -18,36 +20,27 @@
         .form-group { margin: 10px 0; padding: 10px; background: #fafafa; border-radius: 5px; border: 1px solid #e1e4e8; }
         input, select, textarea { padding: 8px; margin: 5px 0; width: 100%; box-sizing: border-box; border-radius: 4px; border: 1px solid #ccc; }
         .ai-box { background: #e8f0fe; padding: 15px; border-radius: 6px; border: 2px dashed #1a73e8; margin-top: 10px; }
-        .security-box { background: #fff3cd; border: 1px solid #ffeeba; }
     </style>
 </head>
 <body>
 
-    <h1>CGTS Admin Control Panel</h1>
-
-    <div class="section security-box">
-        <h2>🔒 Password Settings Control</h2>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-            <div>
-                <h4>Admin Password Badlein</h4>
-                <input type="password" id="newAdminPass" placeholder="Naya Admin Password">
-                <button class="btn-del" style="background:#0056b3;" onclick="changeAdminPassword()">Update Admin Password</button>
-            </div>
-            <div>
-                <h4>Student Password Reset</h4>
-                <select id="studentSelectForPass"></select>
-                <input type="text" id="newStudentPass" placeholder="Naya Student Password">
-                <button class="btn-app" onclick="changeStudentPassword()">Reset Student Password</button>
-            </div>
-        </div>
+    <div class="header-bar">
+        <h1>CGTS Admin Control Panel</h1>
+        <button class="logout-btn" onclick="adminLogout()">🔒 Logout</button>
     </div>
 
     <div class="section">
-        <h2>Student Approvals (Passwords Hidden 👁️)</h2>
+        <h2>Student Approvals (Naam, Mobile, Password List)</h2>
         <div style="overflow-x:auto;">
             <table id="studentTable">
                 <thead>
-                    <tr><th>Naam</th><th>Mobile</th><th>Password</th><th>Status</th><th>Action</th></tr>
+                    <tr>
+                        <th>Naam</th>
+                        <th>Mobile</th>
+                        <th>Password</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
                 </thead>
                 <tbody></tbody>
             </table>
@@ -84,7 +77,9 @@
             <input type="hidden" id="targetSubjectId">
             <input type="hidden" id="targetTestId">
             <p id="targetTestName" style="font-weight: bold; color: #333;"></p>
+
             <textarea id="aiBulkText" rows="12" placeholder='Yahan apna [ { "question": "..." } ] poora format paste karein...'></textarea>
+            
             <button class="btn-app" style="background: #1a73e8;" onclick="processCustomFormatSubmission()">⚡ Upload 30+ Questions Instantly</button>
             <button class="btn-hide" style="background:#6c757d; color:white;" onclick="closeAIForm()">Cancel</button>
         </div>
@@ -95,46 +90,25 @@
     <script>
         async function loadAll() { loadStudents(); loadAdminContent(); }
 
+        // Students load karne ka function (Ab yahan password saaf dikhega s.password se)
         async function loadStudents() {
             const res = await fetch('/api/admin/students');
             const students = await res.json();
             const tbody = document.querySelector('#studentTable tbody');
-            const passSelect = document.getElementById('studentSelectForPass');
             tbody.innerHTML = '';
-            passSelect.innerHTML = '';
 
             students.forEach(s => {
-                tbody.innerHTML += `<tr><td>${s.name}</td><td>${s.mobile}</td><td>••••••</td><td><mark>${s.status.toUpperCase()}</mark></td><td><button class="btn-app" onclick="updateStatus(${s.id}, 'approved')">Approve</button> <button class="btn-del" onclick="updateStatus(${s.id}, 'delete')">Delete</button></td></tr>`;
-                
-                // Populating dropdown for password change
-                passSelect.innerHTML += `<option value="${s.id}">${s.name} (${s.mobile})</option>`;
+                tbody.innerHTML += `<tr>
+                    <td>${s.name}</td>
+                    <td>${s.mobile}</td>
+                    <td style="color: #d63384; font-weight: bold;">${s.password}</td>
+                    <td><mark>${s.status.toUpperCase()}</mark></td>
+                    <td>
+                        <button class="btn-app" onclick="updateStatus(${s.id}, 'approved')">Approve</button> 
+                        <button class="btn-del" onclick="updateStatus(${s.id}, 'delete')">Delete</button>
+                    </td>
+                </tr>`;
             });
-        }
-
-        async function changeAdminPassword() {
-            const newPass = document.getElementById('newAdminPass').value;
-            if(!newPass) return alert("Kripya password type karein");
-            await fetch('/api/admin/change-password', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ role: 'admin', newPassword: newPass })
-            });
-            alert("Admin password badal gaya!");
-            document.getElementById('newAdminPass').value = '';
-        }
-
-        async function changeStudentPassword() {
-            const sId = document.getElementById('studentSelectForPass').value;
-            const newPass = document.getElementById('newStudentPass').value;
-            if(!newPass) return alert("Kripya student ke liye naya password likhein");
-            await fetch('/api/admin/change-password', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ role: 'student', studentId: sId, newPassword: newPass })
-            });
-            alert("Student ka password update ho gaya!");
-            document.getElementById('newStudentPass').value = '';
-            loadStudents();
         }
 
         async function updateStatus(id, status) {
@@ -211,6 +185,12 @@
 
             await fetch('/api/admin/test', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'update-questions', courseId: cId, subjectId: sId, testId: tId, questions: test.questions }) });
             alert("Upload Success!"); closeAIForm(); loadAdminContent();
+        }
+
+        // Admin Logout Functionality
+        function adminLogout() {
+            localStorage.removeItem('adminToken'); // Token clear karne ke liye
+            window.location.href = 'index.html'; // Login page par redirect
         }
 
         window.onload = loadAll;
