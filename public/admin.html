@@ -9,11 +9,11 @@
         .header-bar { background: #004085; color: white; padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .header-bar h1 { margin: 0; font-size: 22px; }
         .logout-btn { background: #dc3545; color: white; border: none; padding: 8px 15px; cursor: pointer; border-radius: 4px; font-weight: bold; }
-        
+
         /* Stats Dashboard Grid Styles */
         .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 20px; }
         .stats-card { padding: 15px; border-radius: 8px; color: white; font-weight: bold; text-align: center; box-shadow: 0 3px 6px rgba(0,0,0,0.1); }
-        
+
         .section { background: white; padding: 15px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
         h2 { font-size: 18px; border-bottom: 2px solid #004085; padding-bottom: 5px; color: #004085; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
@@ -44,19 +44,6 @@
         <h2>📢 Announcement Notice Board Broadcaster</h2>
         <input type="text" id="noticeText" placeholder="Yahan announcement text likhein jo sabhi students ko live dikhega...">
         <button class="btn-app" style="background:#b78a00;" onclick="broadcastNotice()">Broadcast Live Notice</button>
-    </div>
-
-    <div class="section" style="background: #eef9ff; border: 1px solid #bce1f5;">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <h2>🏆 Global Leaderboard (Full Names & Mobile)</h2>
-            <button class="btn-app" style="background: #007bff;" onclick="downloadExcel()">Export To CSV (Excel)</button>
-        </div>
-        <table id="adminLeaderboardTable"><thead><tr><th>Rank</th><th>Student Name</th><th>Mobile No</th><th>Exam Name</th><th>Score</th><th>Date</th></tr></thead><tbody></tbody></table>
-    </div>
-
-    <div class="section">
-        <h2>Student Management & Approvals</h2>
-        <table id="studentTable"><thead><tr><th>Naam</th><th>Mobile</th><th>Password</th><th>Status</th><th>Action</th></tr></thead><tbody></tbody></table>
     </div>
 
     <div class="section">
@@ -92,6 +79,19 @@
             <button class="btn-del" onclick="closeAIForm()">Cancel</button>
         </div>
         <div id="contentTree" style="margin-top: 15px;"></div>
+    </div>
+
+    <div class="section">
+        <h2>Student Management & Approvals</h2>
+        <table id="studentTable"><thead><tr><th>Naam</th><th>Mobile</th><th>Password</th><th>Status</th><th>Action</th></tr></thead><tbody></tbody></table>
+    </div>
+
+    <div class="section" style="background: #eef9ff; border: 1px solid #bce1f5;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h2>🏆 Global Leaderboard (Full Names & Mobile)</h2>
+            <button class="btn-app" style="background: #007bff;" onclick="downloadExcel()">Export To CSV (Excel)</button>
+        </div>
+        <table id="adminLeaderboardTable"><thead><tr><th>Rank</th><th>Student Name</th><th>Mobile No</th><th>Exam Name</th><th>Score</th><th>Date</th></tr></thead><tbody></tbody></table>
     </div>
 
     <script>
