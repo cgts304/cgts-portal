@@ -26,6 +26,7 @@
         table { width: 100%; border-collapse: collapse; margin-top: 15px; }
         th, td { border: 1px solid #e2e8f0; padding: 10px; text-align: left; }
         th { background: rgba(0,0,0,0.03); }
+        .filter-input { width: 100%; padding: 10px; margin-top: 10px; margin-bottom: 5px; border-radius: 6px; border: 1px solid #cbd5e1; box-sizing: border-box; background: var(--bg); color: var(--text); }
     </style>
 </head>
 <body>
@@ -46,8 +47,18 @@
         <div id="displayGrid" class="grid-container"></div>
 
         <div class="box"><h3>⭐ My Bookmarked Questions</h3><div id="bookmarkList" style="color:#64748b;">No bookmarks yet.</div></div>
-        <div class="box"><h3>📊 Past Performance Record</h3><table><thead><tr><th>Test Name</th><th>Score</th><th>Date</th><th>Type</th></tr></thead><tbody id="historyTable"></tbody></table></div>
-        <div class="box" style="background:rgba(245,158,11,0.02); border:1px solid #fef3c7;"><h3>🏆 Public Leaderboard</h3><table><thead><tr><th>Rank</th><th>Student Name</th><th>Test Name</th><th>Score</th><th>Date</th></tr></thead><tbody id="leaderboardTable"></tbody></table></div>
+        
+        <div class="box">
+            <h3>📊 Past Performance Record</h3>
+            <input type="text" id="historyFilter" class="filter-input" placeholder="🔍 Subject ya Test ke naam se filter karein..." onkeyup="filterTable('historyTable', this.value)">
+            <table><thead><tr><th>Subject & Test Name</th><th>Score</th><th>Date</th><th>Type</th></tr></thead><tbody id="historyTable"></tbody></table>
+        </div>
+
+        <div class="box" style="background:rgba(245,158,11,0.02); border:1px solid #fef3c7;">
+            <h3>🏆 Public Leaderboard</h3>
+            <input type="text" id="leaderboardFilter" class="filter-input" placeholder="🔍 Student Name, Subject ya Test se filter karein..." onkeyup="filterTable('leaderboardTable', this.value)">
+            <table><thead><tr><th>Rank</th><th>Student Name</th><th>Subject & Test Name</th><th>Score</th><th>Date</th></tr></thead><tbody id="leaderboardTable"></tbody></table>
+        </div>
     </div>
 
     <div id="testSection" class="box hidden">
@@ -99,7 +110,7 @@
         function renderCourses() {
             currentLevel = 'courses'; isTestActive = false; $('backBtn').classList.add('hidden'); $('portalHub').classList.remove('hidden'); $('testSection').classList.add('hidden');
             $('panelHeading').innerText = "🏢 Apna Course Select Karein";
-            $('displayGrid').innerHTML = allData.length ? allData.map(c => `<div class="card course-card" onclick="selectCourse(${c.id})">67e5 ${c.name}</div>`).join('') : '<div style="color:#ef4444; font-weight:bold;">No courses available!</div>';
+            $('displayGrid').innerHTML = allData.length ? allData.map(c => `<div class="card course-card" onclick="selectCourse(${c.id})">🏢 ${c.name}</div>`).join('') : '<div style="color:#ef4444; font-weight:bold;">No courses available!</div>';
         }
         function selectCourse(cId) {
             selectedCourse = allData.find(c => c.id === cId); currentLevel = 'subjects'; $('backBtn').classList.remove('hidden');
@@ -114,9 +125,10 @@
 
         function startTest(tId, tName) {
             const test = selectedSubject.tests.find(t => t.id === tId); activeQuestions = test.questions; if(!activeQuestions.length) return alert("Test Khali Hai!");
-            currentTestId = tId; currentTestName = tName; tabCheatCount = 0; isTestActive = true;
+            currentTestId = tId; currentTestName = `${selectedSubject.name} - ${tName}`; // Yahan automatic subject prefix joda gaya hai backend submission ke liye
+            tabCheatCount = 0; isTestActive = true;
             answersCache = JSON.parse(localStorage.getItem('offline_answers')) || {};
-            $('portalHub').classList.add('hidden'); $('testSection').classList.remove('hidden'); $('activeTestTitle').innerText = tName;
+            $('portalHub').classList.add('hidden'); $('testSection').classList.remove('hidden'); $('activeTestTitle').innerText = currentTestName;
             totalSecondsLeft = activeQuestions.length * 60; startTimer();
             
             $('questionArea').innerHTML = activeQuestions.map((q, idx) => {
@@ -155,6 +167,17 @@
 
         async function loadStudentHistory(mb) { try{ const res = await fetch(`/api/history/${mb}`); const h = await res.json(); $('historyTable').innerHTML = h.reverse().map(r => `<tr><td>${r.testName}</td><td><b>${r.score}</b> / ${r.totalQs}</td><td>${r.date}</td><td>${r.isFirstAttempt ? '<span style="color:#10b981; font-weight:bold;">First Attempt</span>':'<span>Practice Run</span>'}</td></tr>`).join(''); }catch(e){} }
         async function loadLeaderboard() { try{ const list = await (await fetch('/api/leaderboard')).json(); $('leaderboardTable').innerHTML = list.map((l, i) => `<tr><td><b>#${i+1}</b></td><td>${l.studentName}</td><td>${l.testName}</td><td><mark><b>${l.score}</b></mark></td><td>${l.date}</td></tr>`).join(''); }catch(e){} }
+        
+        // --- LIVE TABLE FILTER ENGINE ---
+        function filterTable(tableId, filterValue) {
+            const val = filterValue.toLowerCase();
+            const rows = document.querySelectorAll(`#${tableId} tr`);
+            rows.forEach(row => {
+                const text = row.innerText.toLowerCase();
+                row.style.display = text.includes(val) ? "" : "none";
+            });
+        }
+
         function goBack() { currentLevel === 'subjects' ? renderCourses() : (currentLevel === 'tests' && selectCourse(selectedCourse.id)); }
         window.onload = init;
     </script>
