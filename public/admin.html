@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CGTS Admin Control</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 15px; background: #f4f6f9; color: #333; }
+        h1 { color: #004085; font-size: 24px; text-align: center; }
+        .section { background: white; padding: 15px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        h2 { font-size: 18px; border-bottom: 2px solid #004085; padding-bottom: 5px; color: #004085; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f1f1f1; }
+        button { padding: 6px 10px; cursor: pointer; border-radius: 4px; border: none; font-size: 12px; font-weight: bold; margin: 2px; }
+        .btn-app { background: #28a745; color: white; }
+        .btn-rej { background: #ffc107; color: black; }
+        .btn-del { background: #dc3545; color: white; }
+        .btn-hide { background: #6c757d; color: white; }
+        .form-group { margin: 10px 0; padding: 10px; background: #fafafa; border-radius: 5px; border: 1px solid #e1e4e8; }
+        input, select { padding: 8px; margin: 5px 0; width: 100%; box-sizing: border-box; border-radius: 4px; border: 1px solid #ccc; }
+    </style>
+</head>
+<body>
+
+    <h1>CGTS Admin Control Panel</h1>
+
+    <!-- Student Management -->
+    <div class="section">
+        <h2>Student Approvals (Naam, Mobile, Password List)</h2>
+        <div style="overflow-x:auto;">
+            <table id="studentTable">
+                <thead>
+                    <tr>
+                        <th>Naam</th>
+                        <th>Mobile</th>
+                        <th>Password</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Content Management -->
+    <div class="section">
+        <h2>Create Test Content</h2>
+        
+        <div class="form-group">
+            <h3>1. Course Banayein (e.g., Assistant Teacher Arts/Science)</h3>
+            <input type="text" id="courseName" placeholder="Course Name">
+            <button class="btn-app" onclick="manageCourse('create')">Create Course</button>
+        </div>
+
+        <div class="form-group">
+            <h3>2. Subject Banayein (e.g., Child Development, English)</h3>
+            <select id="courseSelect" onchange="loadAdminContent()"></select>
+            <input type="text" id="subjectName" placeholder="Subject Name">
+            <button class="btn-app" onclick="manageSubject('create')">Add Subject</button>
+        </div>
+
+        <div class="form-group">
+            <h3>3. Test Name Add Karein</h3>
+            <select id="subjectSelect"></select>
+            <input type="text" id="testName" placeholder="Test Name (e.g., Mock Test 1)">
+            <button class="btn-app" onclick="manageTest('create')">Add Test</button>
+        </div>
+    </div>
+
+    <!-- Live Content Hierarchy Tree -->
+    <div class="section">
+        <h2>Live Content Tree (Add Questions / Hide / Delete)</h2>
+        <div id="contentTree"></div>
+    </div>
+
+    <script>
+        async function loadAll() {
+            loadStudents();
+            loadAdminContent();
+        }
+
+        async function loadStudents() {
+            const res = await fetch('/api/admin/students');
+            const students = await res.json();
+            const tbody = document.querySelector('#studentTable tbody');
+            tbody.innerHTML = '';
+            students.forEach(s => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${s.name}</td>
+                        <td>${s.mobile}</td>
+                        <td>${s.password}</td>
+                        <td><mark>${s.status.toUpperCase()}</mark></td>
+                        <td>
+                            <button class="btn-app" onclick="updateStatus(${s.id}, 'approved')">Approve</button>
+                            <button class="btn-rej" onclick="updateStatus(${s.id}, 'rejected')">Reject</button>
+                            <button class="btn-del" onclick="updateStatus(${s.id}, 'delete')">Delete</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        async function updateStatus(id, status) {
+            await fetch('/api/admin/student-status', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, status })
+            });
+            loadAll();
+        }
+
+        async function loadAdminContent() {
+            const res = await fetch('/api/admin/content');
+            const courses = await res.json();
+            
+            const courseSelect = document.getElementById('courseSelect');
+            const subjectSelect = document.getElementById('subjectSelect');
+            const contentTree = document.getElementById('contentTree');
+            
+            const selectedCVal = courseSelect.value;
+            courseSelect.innerHTML = '';
+            subjectSelect.innerHTML = '';
+            contentTree.innerHTML = '';
+
+            courses.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.id; opt.innerText = c.name;
+                if(c.id == selectedCVal) opt.selected = true;
+                courseSelect.appendChild(opt);
+                
+                let subjectHTML = '';
+                c.subjects.forEach(s => {
+                    if(courseSelect.value == c.id) {
+                        subjectSelect.innerHTML += `<option value="${s.id}">${s.name}</option>`;
+                    }
+
+                    let testHTML = '';
+                    s.tests.forEach(t => {
+                        testHTML += `
+                            <div style="margin-left: 20px; background: #fff3cd; padding: 8px; margin-top:5px; border-radius:4px;">
+                                📝 Test: <b>${t.name}</b> ${t.hidden ? '(Hidden)' : ''} | Qs: ${t.questions.length}
+                                <br>
+                                <button class="btn-hide" onclick="toggleTestHide(${c.id}, ${s.id}, ${t.id})">Hide/Show</button>
+                                <button class="btn-del" onclick="deleteTest(${c.id}, ${s.id}, ${t.id})">Delete</button>
+                                <button class="btn-app" style="background:#17a2b8; color:white;" onclick="addQuestionPrompt(${c.id}, ${s.id}, ${t.id})">+ Add Question</button>
+                            </div>`;
+                    });
+
+                    subjectHTML += `
+                        <div style="margin-left: 15px; background: #e2e3e5; padding: 8px; margin-top:5px; border-radius:4px;">
+                            📚 Subject: <b>${s.name}</b> ${s.hidden ? '(Hidden)' : ''}
+                            <br>
+                            <button class="btn-hide" onclick="toggleSubjectHide(${c.id}, ${s.id})">Hide/Show</button>
+                            <button class="btn-del" onclick="deleteSubject(${c.id}, ${s.id})">Delete</button>
+                            ${testHTML}
+                        </div>`;
+                });
+
+                contentTree.innerHTML += `
+                    <div style="background: #d1ecf1; padding: 10px; margin-top: 10px; border-radius: 4px;">
+                        🏢 Course: <strong>${c.name}</strong> ${c.hidden ? '(Hidden)' : ''}
+                        <br>
+                        <button class="btn-hide" onclick="toggleCourseHide(${c.id})">Hide/Show</button>
+                        <button class="btn-del" onclick="deleteCourse(${c.id})">Delete</button>
+                        ${subjectHTML}
+                    </div>`;
+            });
+        }
+
+        async function manageCourse(action, courseId) {
+            const name = document.getElementById('courseName').value;
+            await fetch('/api/admin/course', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action, courseId, name })
+            });
+            loadAdminContent();
+        }
+        async function deleteCourse(id) { await manageCourse('delete', id); }
+        async function toggleCourseHide(id) { await fetch('/api/admin/course', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({action: 'toggle-hide', courseId: id}) }); loadAdminContent(); }
+
+        async function manageSubject(action, sId) {
+            const courseId = parseInt(document.getElementById('courseSelect').value);
+            const name = document.getElementById('subjectName').value;
+            await fetch('/api/admin/subject', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action, courseId, subjectId: sId, name })
+            });
+            loadAdminContent();
+        }
+        async function deleteSubject(cId, sId) {
+            await fetch('/api/admin/subject', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'delete', courseId: cId, subjectId: sId }) });
+            loadAdminContent();
+        }
+        async function toggleSubjectHide(cId, sId) {
+            await fetch('/api/admin/subject', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'toggle-hide', courseId: cId, subjectId: sId }) });
+            loadAdminContent();
+        }
+
+        async function manageTest(action, tId) {
+            const courseId = parseInt(document.getElementById('courseSelect').value);
+            const subjectId = parseInt(document.getElementById('subjectSelect').value);
+            const name = document.getElementById('testName').value;
+            await fetch('/api/admin/test', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action, courseId, subjectId, testId: tId, name })
+            });
+            loadAdminContent();
+        }
+        async function deleteTest(cId, sId, tId) {
+            await fetch('/api/admin/test', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'delete', courseId: cId, subjectId: sId, testId: tId }) });
+            loadAdminContent();
+        }
+        async function toggleTestHide(cId, sId, tId) {
+            await fetch('/api/admin/test', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'toggle-hide', courseId: cId, subjectId: sId, testId: tId }) });
+            loadAdminContent();
+        }
+
+        async function addQuestionPrompt(cId, sId, tId) {
+            const qText = prompt("Sawal (Question) Type karein:");
+            const opA = prompt("Option A:");
+            const opB = prompt("Option B:");
+            const ans = prompt("Sahi Jawab kya hai? (Sirf bade akshar me 'A' ya 'B' dalein):");
+            if(!qText || !opA || !opB || !ans) return alert("Kuch khali reh gaya, save nahi hua.");
+
+            const res = await fetch('/api/admin/content');
+            const data = await res.json();
+            const course = data.find(c => c.id === cId);
+            const subj = course.subjects.find(s => s.id === sId);
+            const test = subj.tests.find(t => t.id === tId);
+            
+            test.questions.push({ qText, options: [opA, opB], ans });
+
+            await fetch('/api/admin/test', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'update-questions', courseId: cId, subjectId: sId, testId: tId, questions: test.questions })
+            });
+            loadAdminContent();
+        }
+
+        window.onload = loadAll;
+    </script>
+</body>
+</html>
+
