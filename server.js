@@ -9,6 +9,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 const DATA_FILE = path.join(__dirname, 'data.json');
 
+// Permanent JSON Data Folder aur File checking
 function initDatabase() {
     if (!fs.existsSync(DATA_FILE)) {
         const initialData = {
@@ -34,7 +35,7 @@ app.post('/api/register', (req, res) => {
     }
     data.students.push({ id: Date.now(), name, mobile, password, status: 'pending' });
     writeData(data);
-    res.json({ success: true, message: 'Registration safal! Admin approval ka wait karne.' });
+    res.json({ success: true, message: 'Registration safal! Admin approval ka wait karein.' });
 });
 
 app.post('/api/login', (req, res) => {
@@ -123,11 +124,26 @@ app.post('/api/admin/test', (req, res) => {
     writeData(data); res.json({ success: true });
 });
 
-// Leaderboard Submissions
+// Leaderboard Submissions (Dynamic Format Sync Optimized)
 app.post('/api/test/submit', (req, res) => {
     const { studentName, mobile, testId, testName, score, totalQs } = req.body;
     let data = readData();
     if(!data.leaderboard) data.leaderboard = [];
+    
+    // Dynamic Subject Name extraction taaki leaderboard dropdown sync ho sake
+    let formattedTestName = testName;
+    try {
+        data.content.forEach(c => {
+            c.subjects.forEach(s => {
+                const foundTest = s.tests.find(t => t.id == testId);
+                if(foundTest) {
+                    // It saves as: "Bal Vikas | Mock Test 01"
+                    formattedTestName = `${s.name} | ${foundTest.name}`;
+                }
+            });
+        });
+    } catch(err) {}
+
     const alreadyExists = data.leaderboard.find(log => log.mobile == mobile && log.testId == testId);
     
     const attemptLog = {
@@ -135,7 +151,7 @@ app.post('/api/test/submit', (req, res) => {
         studentName,
         mobile,
         testId,
-        testName,
+        testName: formattedTestName,
         score: parseFloat(score),
         totalQs,
         date: new Date().toLocaleDateString('hi-IN'),
@@ -146,6 +162,7 @@ app.post('/api/test/submit', (req, res) => {
     res.json({ success: true, isFirstAttempt: !alreadyExists });
 });
 
+// Global Dynamic Leaderboard API
 app.get('/api/leaderboard', (req, res) => {
     const data = readData();
     const records = data.leaderboard || [];
@@ -159,4 +176,4 @@ app.get('/api/history/:mobile', (req, res) => {
     res.json(records.filter(r => r.mobile == req.params.mobile));
 });
 
-app.listen(PORT, () => console.log(`Server optimized on port ${PORT}`));
+app.listen(PORT, () => console.log(`Server optimized and safely running on port ${PORT}`));
