@@ -3,187 +3,219 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CGTS - Student Portal & Auto Timer</title>
+    <title>CGTS Student Dashboard</title>
     <style>
-        body { font-family: 'Segoe UI', Arial, sans-serif; margin: 15px; background: #f0f2f5; }
-        .header { background: #004085; color: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
-        .header h2 { margin: 0; font-size: 18px; }
-        .grid-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(145px, 1fr)); gap: 15px; margin-top: 15px; }
-        .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.06); cursor: pointer; text-align: center; font-size: 15px; font-weight: bold; }
-        .course-card { border-top: 5px solid #28a745; background: #eafaf1; color: #28a745; }
-        .subject-card { border-top: 5px solid #ffc107; background: #fffdf3; color: #b78a00; }
-        .test-card { border-top: 5px solid #17a2b8; background: #f0fbfc; color: #17a2b8; }
+        body { font-family: Arial, sans-serif; margin: 15px; background: #f0f2f5; }
+        .header { background: #004085; color: white; padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .grid-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; margin-top: 15px; }
+        .card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); cursor: pointer; text-align: center; font-weight: bold; }
+        .course-card { border-top: 4px solid #28a745; color: #28a745; }
+        .subject-card { border-top: 4px solid #ffc107; color: #b78a00; }
+        .test-card { border-top: 4px solid #17a2b8; color: #17a2b8; }
         .hidden { display: none; }
-        .test-box, .result-box { background: white; padding: 20px; border-radius: 10px; margin-top: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
-        .back-btn { background: #6c757d; color: white; padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer; margin-bottom: 15px; font-weight: bold; }
-        .logout-btn { background: #dc3545; color: white; border: none; padding: 6px 12px; cursor: pointer; border-radius: 4px; }
-        .q-block { margin-bottom: 20px; padding: 15px; background:#fafafa; border-radius:6px; border:1px solid #eee; }
-        .vyakhya-box { background: #fff3cd; padding: 10px; border-radius: 5px; margin-top: 8px; border-left: 4px solid #ffc107; font-size: 14px; color: #664d03; }
-        .wrong-ans { color: red; font-weight: bold; }
-        .right-ans { color: green; font-weight: bold; }
-        .timer-banner { background: #dc3545; color: white; padding: 10px; font-weight: bold; font-size: 18px; text-align: center; border-radius: 6px; position: sticky; top: 0; z-index: 100; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .box { background: white; padding: 20px; border-radius: 8px; margin-top: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .q-block { margin-bottom: 15px; padding: 12px; background:#fafafa; border-radius:6px; border:1px solid #eee; }
+        .timer-banner { background: #dc3545; color: white; padding: 10px; font-weight: bold; text-align: center; border-radius: 4px; position: sticky; top: 0; z-index: 100; font-size:18px; }
+        .vyakhya-box { background: #fff3cd; padding: 8px; border-radius: 4px; margin-top: 5px; border-left: 4px solid #ffc107; font-size: 13px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size:13px; }
+        th, td { border: 1px solid #ddd; padding: 6px; text-align: left; }
+        th { background: #f1f1f1; }
     </style>
 </head>
 <body>
 
     <div class="header">
         <h2 id="welcomeMsg">Welcome!</h2>
-        <button class="logout-btn" onclick="localStorage.clear(); window.location.href='index.html';">Logout</button>
+        <button style="background:#dc3545; color:white; border:none; padding:6px 12px; cursor:pointer; border-radius:4px;" onclick="localStorage.clear(); window.location.href='index.html';">Logout</button>
     </div>
 
-    <button id="backBtn" class="back-btn hidden" onclick="goBack()">⬅️ Back</button>
+    <div style="margin-top:10px;">
+        <button id="backBtn" class="hidden" onclick="goBack()" style="padding:6px 12px; cursor:pointer;">⬅️ Back</button>
+    </div>
 
-    <div id="mainTitle"><h3>Apna Course Chunein</h3></div>
-    <div id="displayGrid" class="grid-container"></div>
+    <div id="portalHub">
+        <div id="mainTitle"><h3>Apna Course Select Karein</h3></div>
+        <div id="displayGrid" class="grid-container"></div>
 
-    <div id="testSection" class="test-box hidden">
-        <div id="timerDisplay" class="timer-banner">⏱️ बची हुई समय: --:--</div>
-        <h2 id="activeTestTitle" style="color: #004085; text-align:center;"></h2>
+        <div class="box">
+            <h3>📊 My Past Performance Record</h3>
+            <table id="historyTable">
+                <thead><tr><th>Test Name</th><th>Score Achieved</th><th>Date Given</th><th>Attempt Type</th></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+        <div class="box" style="background: #fff8ee; border:1px solid #f5e4cc;">
+            <h3>🏆 Public Rank Leaderboard (First Attempts Only)</h3>
+            <table id="studentLeaderboardTable">
+                <thead><tr><th>Rank</th><th>Student Name</th><th>Test/Exam Name</th><th>Final Score</th><th>Date</th></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="testSection" class="box hidden">
+        <div id="timerDisplay" class="timer-banner">⏱️ Time Left: --:--</div>
+        <h2 id="activeTestTitle" style="text-align:center; color:#004085;"></h2>
         <div id="questionArea"></div>
-        <button onclick="submitTest()" style="background: #28a745; color:white; padding: 12px 25px; border:none; border-radius:6px; cursor:pointer; font-size:16px; font-weight:bold; width:100%; margin-top:15px;">Submit Test</button>
+        <button onclick="submitTest()" style="background:#28a745; color:white; padding:12px; border:none; border-radius:4px; font-size:16px; font-weight:bold; width:100%; cursor:pointer; margin-top:15px;">Final Submit Test</button>
     </div>
 
-    <div id="resultSection" class="result-box hidden">
-        <h2 style="color: #28a745; text-align: center;">🎉 Test Result & Answers Review</h2>
-        <h3 id="scoreDisplay" style="text-align: center; background: #e2f0d9; padding: 10px; border-radius: 5px;"></h3>
+    <div id="resultSection" class="box hidden">
+        <h2 style="color:green; text-align:center;">🎉 Test Submitted Successfully!</h2>
+        <h3 id="scoreDisplay" style="text-align:center; background:#e2f0d9; padding:10px;"></h3>
+        <p style="text-align:center; color:#666; font-size:12px;">⚠️ Note: Leaderboard records only take your very first attempt score into account.</p>
         <div id="reviewArea"></div>
-        <button onclick="renderCourses()" style="background:#0056b3; color:white; border:none; padding:12px; width:100%; font-weight:bold; border-radius:6px; margin-top:15px; cursor:pointer;">Dashboard Par Wapas Jayein</button>
+        <button onclick="location.reload()" style="background:#004085; color:white; border:none; padding:12px; width:100%; border-radius:4px; cursor:pointer; font-weight:bold;">Back to Dashboard</button>
     </div>
 
     <script>
-        let allData = [];
-        let currentLevel = 'courses'; 
-        let selectedCourse = null;
-        let selectedSubject = null;
-        let activeQuestions = [];
-        let timerInterval = null;
-        let totalSecondsLeft = 0;
+        let allData = [], currentLevel = 'courses', selectedCourse = null, selectedSubject = null, activeQuestions = [], timerInterval = null, totalSecondsLeft = 0, currentTestId = '', currentTestName = '';
+        let tabCheatCount = 0, isTestActive = false;
 
-        async function loadDashboard() {
+        async function init() {
             const student = JSON.parse(localStorage.getItem('student'));
             if(!student) { window.location.href = 'index.html'; return; }
             document.getElementById('welcomeMsg').innerText = `👤 ${student.name}`;
-            const res = await fetch('/api/content');
-            allData = await res.json();
-            renderCourses();
+            
+            const res = await fetch('/api/content'); allData = await res.json();
+            renderCourses(); loadStudentHistory(student.mobile); loadLeaderboard();
         }
 
+        // Anti-Cheating System Monitoring Tab Switching
+        document.addEventListener('visibilitychange', () => {
+            if (isTestActive && document.hidden) {
+                tabCheatCount++;
+                if (tabCheatCount === 1) {
+                    alert("⚠️ WARNING: Aapne test ke beech me browser tab badla hai! Agli baar aisa karne par test automatic submit ho jayega.");
+                } else if (tabCheatCount >= 2) {
+                    alert("🚨 TEST TERMINATED: Cheating violations detected. Test automatic submit ho raha hai.");
+                    submitTest();
+                }
+            }
+        });
+
         function renderCourses() {
-            clearInterval(timerInterval);
-            currentLevel = 'courses';
+            currentLevel = 'courses'; isTestActive = false;
             document.getElementById('backBtn').classList.add('hidden');
+            document.getElementById('portalHub').classList.remove('hidden');
             document.getElementById('testSection').classList.add('hidden');
-            document.getElementById('resultSection').classList.add('hidden');
-            document.getElementById('displayGrid').classList.remove('hidden');
-            document.getElementById('mainTitle').innerHTML = "<h3>🏢 Available Courses</h3>";
-            
-            const grid = document.getElementById('displayGrid');
-            grid.innerHTML = '';
-            allData.forEach(c => { grid.innerHTML += `<div class="card course-card" onclick="selectCourse(${c.id})">📚 ${c.name}</div>`; });
+            document.getElementById('displayGrid').innerHTML = '';
+            allData.forEach(c => { document.getElementById('displayGrid').innerHTML += `<div class="card course-card" onclick="selectCourse(${c.id})">🏢 ${c.name}</div>`; });
         }
 
         function selectCourse(cId) {
-            selectedCourse = allData.find(c => c.id === cId);
-            currentLevel = 'subjects';
+            selectedCourse = allData.find(c => c.id === cId); currentLevel = 'subjects';
             document.getElementById('backBtn').classList.remove('hidden');
-            document.getElementById('mainTitle').innerHTML = "<h3>📖 Select Subject</h3>";
-            const grid = document.getElementById('displayGrid');
-            grid.innerHTML = '';
-            selectedCourse.subjects.forEach(s => { grid.innerHTML += `<div class="card subject-card" onclick="selectSubject(${s.id})">📘 ${s.name}</div>`; });
+            document.getElementById('displayGrid').innerHTML = '';
+            selectedCourse.subjects.forEach(s => { document.getElementById('displayGrid').innerHTML += `<div class="card subject-card" onclick="selectSubject(${s.id})">📚 ${s.name}</div>`; });
         }
 
         function selectSubject(sId) {
-            selectedSubject = selectedCourse.subjects.find(s => s.id === sId);
-            currentLevel = 'tests';
-            document.getElementById('mainTitle').innerHTML = "<h3>📝 Select Test</h3>";
-            const grid = document.getElementById('displayGrid');
-            grid.innerHTML = '';
-            selectedSubject.tests.forEach(t => { grid.innerHTML += `<div class="card test-card" onclick="startTest(${t.id})">✏️ ${t.name}<br><span style="font-size:11px; color:#666; font-weight:normal;">Qs: ${t.questions.length} | Mins: ${t.questions.length}</span></div>`; });
+            selectedSubject = selectedCourse.subjects.find(s => s.id === sId); currentLevel = 'tests';
+            document.getElementById('displayGrid').innerHTML = '';
+            selectedSubject.tests.forEach(t => { document.getElementById('displayGrid').innerHTML += `<div class="card test-card" onclick="startTest(${t.id}, '${t.name}')">📝 ${t.name}<br><span style="font-size:10px; font-weight:normal; color:#555;">Qs: ${t.questions.length} (Negative: 0.25)</span></div>`; });
         }
 
-        function startTest(tId) {
-            const test = selectedSubject.tests.find(t => t.id === tId);
-            activeQuestions = test.questions;
-            if(activeQuestions.length === 0) return alert("Is test me koi sawal nahi hai.");
+        function startTest(tId, tName) {
+            const test = selectedSubject.tests.find(t => t.id === tId); activeQuestions = test.questions;
+            if(activeQuestions.length === 0) return alert("Empty Test!");
+            currentTestId = tId; currentTestName = tName; tabCheatCount = 0; isTestActive = true;
 
-            currentLevel = 'active-test';
-            document.getElementById('displayGrid').classList.add('hidden');
+            document.getElementById('portalHub').classList.add('hidden');
             document.getElementById('testSection').classList.remove('hidden');
-            document.getElementById('activeTestTitle').innerText = test.name;
+            document.getElementById('activeTestTitle').innerText = tName;
+            
+            totalSecondsLeft = activeQuestions.length * 60; startTimer();
 
-            // Timer Calculation: 1 Question = 1 Minute (e.g. 10 Qs = 600 Seconds)
-            totalSecondsLeft = activeQuestions.length * 60; 
-            startTimerCountdown();
-
-            const qArea = document.getElementById('questionArea');
-            qArea.innerHTML = '';
+            const qArea = document.getElementById('questionArea'); qArea.innerHTML = '';
             activeQuestions.forEach((q, index) => {
                 qArea.innerHTML += `
                     <div class="q-block">
                         <p><strong>Q${index+1}: ${q.qText}</strong></p>
-                        <label><input type="radio" name="q${index}" value="A"> <b>A)</b> ${q.options[0]}</label><br><br>
-                        <label><input type="radio" name="q${index}" value="B"> <b>B)</b> ${q.options[1]}</label><br><br>
-                        <label><input type="radio" name="q${index}" value="C"> <b>C)</b> ${q.options[2]}</label><br><br>
-                        <label><input type="radio" name="q${index}" value="D"> <b>D)</b> ${q.options[3]}</label>
+                        <label><input type="radio" name="q${index}" value="A"> A) ${q.options[0]}</label><br><br>
+                        <label><input type="radio" name="q${index}" value="B"> B) ${q.options[1]}</label><br><br>
+                        <label><input type="radio" name="q${index}" value="C"> C) ${q.options[2]}</label><br><br>
+                        <label><input type="radio" name="q${index}" value="D"> D) ${q.options[3]}</label><br><br>
+                        <button type="button" style="background:#6c757d; color:white; padding:3px 8px; border-radius:3px;" onclick="clearSelection(${index})">Clear Answer</button>
                     </div>`;
             });
         }
 
-        function startTimerCountdown() {
+        function clearSelection(index) {
+            const radioButtons = document.querySelectorAll(`input[name="q${index}"]`);
+            radioButtons.forEach(radio => radio.checked = false);
+        }
+
+        function startTimer() {
             clearInterval(timerInterval);
-            updateTimerDisplayHTML();
             timerInterval = setInterval(() => {
                 totalSecondsLeft--;
-                updateTimerDisplayHTML();
-                if(totalSecondsLeft <= 0) {
-                    clearInterval(timerInterval);
-                    alert("⏰ समय समाप्त हो गया है! आपका टेस्ट ऑटोमैटिक सबमिट किया जा रहा है।");
-                    submitTest();
-                }
+                let m = Math.floor(totalSecondsLeft / 60), s = totalSecondsLeft % 60;
+                document.getElementById('timerDisplay').innerText = `⏱️ Time Left: ${m < 10 ? '0'+m : m}:${s < 10 ? '0'+s : s}`;
+                if(totalSecondsLeft <= 0) { clearInterval(timerInterval); submitTest(); }
             }, 1000);
         }
 
-        function updateTimerDisplayHTML() {
-            let mins = Math.floor(totalSecondsLeft / 60);
-            let secs = totalSecondsLeft % 60;
-            document.getElementById('timerDisplay').innerText = `⏱️ बची हुई समय: ${mins < 10 ? '0'+mins : mins}:${secs < 10 ? '0'+secs : secs}`;
-        }
-
-        function submitTest() {
-            clearInterval(timerInterval);
-            let score = 0;
-            const reviewArea = document.getElementById('reviewArea');
-            reviewArea.innerHTML = '';
+        async function submitTest() {
+            clearInterval(timerInterval); isTestActive = false;
+            let correct = 0, wrong = 0, unattempted = 0;
+            const reviewArea = document.getElementById('reviewArea'); reviewArea.innerHTML = '';
 
             activeQuestions.forEach((q, index) => {
-                const selected = document.querySelector(`input[name="q${index}"]:checked`);
-                const studentAns = selected ? selected.value : 'Nahi Diya';
-                const isCorrect = studentAns === q.ans;
-                if(isCorrect) score++;
+                const checkedOpt = document.querySelector(`input[name="q${index}"]:checked`);
+                let studentAns = checkedOpt ? checkedOpt.value : 'Nahi Diya';
+                
+                let rowStyle = "";
+                if(studentAns === 'Nahi Diya') { unattempted++; rowStyle = "border-left:5px solid #6c757d;"; }
+                else if(studentAns === q.ans) { correct++; rowStyle = "border-left:5px solid green;"; }
+                else { wrong++; rowStyle = "border-left:5px solid red;"; }
 
                 reviewArea.innerHTML += `
-                    <div class="q-block" style="border-left: 5px solid ${isCorrect ? 'green' : 'red'};">
+                    <div class="q-block" style="${rowStyle}">
                         <p><strong>Q${index+1}: ${q.qText}</strong></p>
-                        <p>A) ${q.options[0]} | B) ${q.options[1]} | C) ${q.options[2]} | D) ${q.options[3]}</p>
-                        <p class="${isCorrect ? 'right-ans' : 'wrong-ans'}">Aapka Jawab: ${studentAns}</p>
-                        <p class="right-ans">Sahi Jawab: ${q.ans}</p>
-                        <div class="vyakhya-box"><strong>💡 व्याख्या:</strong> ${q.vyakhya}</div>
+                        <p style="color:${studentAns===q.ans?'green':studentAns==='Nahi Diya'?'#333':'red'}">Aapka Option: ${studentAns}</p>
+                        <p style="color:green; font-weight:bold;">Correct Answer: ${q.ans}</p>
+                        <div class="vyakhya-box"><b>💡 Details:</b> ${q.vyakhya}</div>
                     </div>`;
             });
 
-            document.getElementById('scoreDisplay').innerText = `Total Score: ${score} / ${activeQuestions.length}`;
+            // Mathematical calculation with 0.25 Negative Evaluation
+            let rawScore = (correct * 1) - (wrong * 0.25);
+            let finalScore = rawScore < 0 ? 0 : rawScore; // Prevents score dropping below zero
+
+            document.getElementById('scoreDisplay').innerHTML = `Sahi: <b>${correct}</b> | Galat: <b>${wrong}</b> | Chhode: <b>${unattempted}</b> <br><br> Net Score: <mark><b>${finalScore.toFixed(2)}</b> / ${activeQuestions.length}</mark>`;
+            
             document.getElementById('testSection').classList.add('hidden');
             document.getElementById('resultSection').classList.remove('hidden');
-            window.scrollTo(0,0);
+
+            // Dispatch payload to save score to central database
+            const student = JSON.parse(localStorage.getItem('student'));
+            await fetch('/api/test/submit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ studentName: student.name, mobile: student.mobile, testId: currentTestId, testName: currentTestName, score: finalScore.toFixed(2), totalQs: activeQuestions.length })
+            });
         }
 
-        function goBack() {
-            if (currentLevel === 'subjects') renderCourses();
-            else if (currentLevel === 'tests') selectCourse(selectedCourse.id);
-            else if (currentLevel === 'active-test') { if(confirm("Kya aap test beech me chhodna chahte hain? Progress save nahi hogi.")) { renderCourses(); } }
+        async function loadStudentHistory(mobile) {
+            const res = await fetch(`/api/history/${mobile}`); const history = await res.json();
+            const tbody = document.querySelector('#historyTable tbody'); tbody.innerHTML = '';
+            history.reverse().forEach(h => {
+                tbody.innerHTML += `<tr><td>${h.testName}</td><td><b>${h.score}</b> / ${h.totalQs}</td><td>${h.date}</td><td>${h.isFirstAttempt ? '<span style="color:green; font-weight:bold;">First Attempt</span>':'<span style="color:#666;">Practice Run</span>'}</td></tr>`;
+            });
         }
 
-        window.onload = loadDashboard;
+        async function loadLeaderboard() {
+            const res = await fetch('/api/leaderboard'); const list = await res.json();
+            const tbody = document.querySelector('#studentLeaderboardTable tbody'); tbody.innerHTML = '';
+            list.forEach((l, index) => {
+                tbody.innerHTML += `<tr><td><b>#${index+1}</b></td><td>${l.studentName}</td><td>${l.testName}</td><td><mark><b>${l.score}</b></mark></td><td>${l.date}</td></tr>`;
+            });
+        }
+
+        function goBack() { if(currentLevel==='subjects') renderCourses(); else if(currentLevel==='tests') selectCourse(selectedCourse.id); }
+        window.onload = init;
     </script>
 </body>
 </html>
