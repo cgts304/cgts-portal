@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <html lang="hi">
 <head>
-    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CGTS Admin Panel</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CGTS Structure Control Center</title>
     <style>
         :root { --bg: #f1f5f9; --text: #0f172a; --box: #ffffff; --prim: #0284c7; --sh: 0 4px 6px -1px rgba(0,0,0,0.05); }
         body { font-family: system-ui, sans-serif; margin: 20px; background: var(--bg); color: var(--text); }
@@ -10,13 +11,15 @@
         .box { background: var(--box); padding: 20px; border-radius: 12px; margin-top: 20px; box-shadow: var(--sh); }
         h3 { margin: 0 0 15px 0; font-size: 18px; border-left: 5px solid var(--prim); padding-left: 10px; }
         
-        /* Grid Layout for Course -> Subject -> Test Pipeline */
+        /* Structure Pipeline Row Setup */
         .management-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
-        .manage-card { background: #f8fafc; border: 1px solid #e2e8f0; padding: 15px; border-radius: 8px; }
+        .manage-card { background: #f8fafc; border: 1px solid #e2e8f0; padding: 15px; border-radius: 8px; display: flex; flex-direction: column; justify-content: space-between; }
         
+        label { font-weight: 600; font-size: 13px; color: #475569; margin-bottom: 5px; display: block; }
         input, textarea, select { width: 100%; padding: 10px; margin-bottom: 12px; border-radius: 6px; border: 1px solid #cbd5e1; box-sizing: border-box; font-size: 14px; }
         textarea { font-family: monospace; }
-        button { background: var(--prim); color: white; border: none; padding: 10px 15px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s; width: 100%; }
+        
+        button { background: var(--prim); color: white; border: none; padding: 11px 15px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s; width: 100%; }
         button:hover { opacity: 0.9; }
         .btn-success { background: #10b981; }
         
@@ -29,68 +32,90 @@
 </head>
 <body>
 
+    <!-- Header Panel -->
     <div class="header">
-        <h2>🛠️ CGTS Structure Control Center</h2>
+        <h2>🛠️ CGTS Text Structure Control Panel</h2>
         <button style="background:#ef4444; width:auto;" onclick="localStorage.clear(); location.href='index.html';">Logout</button>
     </div>
 
+    <!-- 1. NOTICE BROADCAST -->
     <div class="box">
         <h3>📢 Student Notice Banner</h3>
         <textarea id="noticeInput" rows="2" style="font-family:system-ui;" placeholder="Live marquee notice text yahan likhein..."></textarea>
         <button style="width:auto;" onclick="updateNotice()">🚀 Broadcast Notice</button>
     </div>
 
+    <!-- 2. TEXT STRUCTURE PIPELINE -->
     <div class="box">
-        <h3>🏗️ Content Structure Pipeline</h3>
+        <h3>🏗️ Text Structure Engine</h3>
         <div class="management-grid">
             
+            <!-- STEP 1: CREATE COURSE -->
             <div class="manage-card">
-                <span style="font-weight:bold; color:var(--prim);">Step 1: Course Control</span>
-                <hr style="margin:10px 0; border:0; border-top:1px solid #cbd5e1;">
-                <input type="text" id="newCourseName" placeholder="New Course Name (e.g. UP Police)">
+                <div>
+                    <span style="font-weight:bold; color:var(--prim);">Step 1: Course Text Structure</span>
+                    <hr style="margin:10px 0; border:0; border-top:1px solid #cbd5e1;">
+                    <label>New Course Name</label>
+                    <input type="text" id="newCourseName" placeholder="e.g. UP Police, SSC GD">
+                </div>
                 <button class="btn-success" onclick="createStructureItem('course')">➕ Create Course</button>
             </div>
 
+            <!-- STEP 2: CREATE SUBJECT -->
             <div class="manage-card">
-                <span style="font-weight:bold; color:#f59e0b;">Step 2: Subject Control</span>
-                <hr style="margin:10px 0; border:0; border-top:1px solid #cbd5e1;">
-                <select id="courseSelectDrop" onchange="syncSubjects()"><option value="">-- Select Course --</option></select>
-                <input type="text" id="newSubName" placeholder="New Subject Name (e.g. Hindi)">
+                <div>
+                    <span style="font-weight:bold; color:#f59e0b;">Step 2: Subject Text Structure</span>
+                    <hr style="margin:10px 0; border:0; border-top:1px solid #cbd5e1;">
+                    <label>Select Parent Course</label>
+                    <select id="courseSelectDrop" onchange="syncSubjects()"><option value="">-- Select Course --</option></select>
+                    <label>New Subject Name</label>
+                    <input type="text" id="newSubName" placeholder="e.g. Hindi, Mathematics">
+                </div>
                 <button class="btn-success" onclick="createStructureItem('subject')">📖 Create Subject</button>
             </div>
 
+            <!-- STEP 3: CREATE TEST -->
             <div class="manage-card">
-                <span style="font-weight:bold; color:#3b82f6;">Step 3: Mock Test Control</span>
-                <hr style="margin:10px 0; border:0; border-top:1px solid #cbd5e1;">
-                <select id="subSelectDrop"><option value="">-- Select Subject --</option></select>
-                <input type="text" id="newTestName" placeholder="New Test Name (e.g. Test 01)">
+                <div>
+                    <span style="font-weight:bold; color:#3b82f6;">Step 3: Mock Test Text Structure</span>
+                    <hr style="margin:10px 0; border:0; border-top:1px solid #cbd5e1;">
+                    <label>Select Parent Subject</label>
+                    <select id="subSelectDrop" onchange="syncTests()"><option value="">-- Select Subject --</option></select>
+                    <label>New Test Name</label>
+                    <input type="text" id="newTestName" placeholder="e.g. Mock Test 01">
+                </div>
                 <button class="btn-success" onclick="createStructureItem('test')">✏️ Create Mock Test</button>
             </div>
 
         </div>
     </div>
 
+    <!-- 3. BULK JSON QUESTION INJECTOR WITH TEXT STRUCTURE PARENT CHECK -->
     <div class="box" style="border-top: 4px solid #8b5cf6;">
-        <h3>⚡ Bulk JSON Question Injector</h3>
-        <p style="margin:0 0 10px 0; font-size:13px; color:#475569;">Pehle upar se Course aur Subject select karein, fir niche <b>Target Test</b> select karke JSON array push karein:</p>
+        <h3>⚡ Targeted Bulk JSON Question Injector</h3>
+        <p style="margin:0 0 12px 0; font-size:13px; color:#475569;">Upar steps mein parameters select karte hi niche aapka <b>Target Mock Test</b> auto-load ho jayega:</p>
         
         <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap:15px; margin-bottom:12px;">
             <div>
-                <label style="font-weight:bold; font-size:13px;">Target Test Select Karein:</label>
-                <select id="finalTestDrop" style="margin-top:5px;"><option value="">-- Select Test --</option></select>
+                <label style="font-weight:bold;">Chuna Hua Target Test:</label>
+                <select id="finalTestDrop" style="margin-top:5px; border: 2px solid #8b5cf6;"><option value="">-- Select Test --</option></select>
             </div>
             <div class="guide">
-                <strong>Format:</strong> [ { "qText": "Sawaal?", "options": ["A","B","C","D"], "ans": "A", "vyakhya": "Explanation" } ]
+                <strong>Correct JSON Syntax Format:</strong><br>
+                [<br>
+                &nbsp;&nbsp;{ "qText": "Sawaal text?", "options": ["A","B","C","D"], "ans": "A", "vyakhya": "Answer explanation text" }<br>
+                ]
             </div>
         </div>
 
-        <textarea id="bulkJsonInput" rows="8" placeholder="Apna poora Questions ka JSON Array [ ... ] yahan paste karein..."></textarea>
-        <button style="background:#8b5cf6;" onclick="uploadBulkQuestions()">📤 Push JSON Questions to Selected Test</button>
+        <textarea id="bulkJsonInput" rows="8" placeholder="Apna poora valid JSON Questions Array yahan paste karein..."></textarea>
+        <button style="background:#8b5cf6;" onclick="uploadBulkQuestions()">📤 Push JSON Questions Live Into Selected Test</button>
     </div>
 
+    <!-- 4. RESULTS & LEADERBOARD DATABASE -->
     <div class="box">
         <h3>📊 Results & Leaderboard Database</h3>
-        <input type="text" id="adminSearch" style="font-family:system-ui;" placeholder="🔍 Student Name ya Mobile se filter karein..." onkeyup="searchTable()">
+        <input type="text" id="adminSearch" style="font-family:system-ui;" placeholder="🔍 Student Name ya Mobile se live table filter karein..." onkeyup="searchTable()">
         <table>
             <thead>
                 <tr>
@@ -100,7 +125,7 @@
                     <th>Score</th><th>Date</th>
                 </tr>
             </thead>
-            <tbody id="adminResultTable"><tr><td colspan="6" style="text-align:center;">Loading...</td></tr></tbody>
+            <tbody id="adminResultTable"><tr><td colspan="6" style="text-align:center;">Loading active matrix records...</td></tr></tbody>
         </table>
     </div>
 
@@ -110,17 +135,17 @@
 
         async function initAdmin() {
             try {
-                // Notice Board Text Fetch
+                // Notice text loader
                 const nRes = await fetch('/api/notice'); const nData = await nRes.json();
                 if(nData.notice) $('noticeInput').value = nData.notice;
 
-                // Load Data Tree Structure
+                // Load complete structured text chain 
                 await reloadStructureTree();
 
-                // Load Submissions Matrix
+                // Load student score data
                 const res = await fetch('/api/leaderboard'); const list = await res.json();
                 let subs = new Set(), tsts = new Set();
-                if(!list.length) return $('adminResultTable').innerHTML = `<tr><td colspan="6" style="text-align:center;">No Data</td></tr>`;
+                if(!list.length) return $('adminResultTable').innerHTML = `<tr><td colspan="6" style="text-align:center;">No Data Found</td></tr>`;
 
                 $('adminResultTable').innerHTML = list.map(l => {
                     let parts = l.testName.split(' | '), sub = parts[0] || 'N/A', tst = parts[1] || l.testName;
@@ -129,88 +154,122 @@
                 }).join('');
 
                 fillDrop('adminSubDrop', subs); fillDrop('adminTestDrop', tsts);
-            } catch(e) { $('adminResultTable').innerHTML = `<tr><td colspan="6" style="text-align:center; color:red;">Database Error!</td></tr>`; }
+            } catch(e) { $('adminResultTable').innerHTML = `<tr><td colspan="6" style="text-align:center; color:red;">Database Connection Error!</td></tr>`; }
         }
 
-        // Tree Syncing Logic
+        // Core Text Tree Architecture Re-loader
         async function reloadStructureTree() {
             const res = await fetch('/api/content'); masterTree = await res.json();
             $('courseSelectDrop').innerHTML = '<option value="">-- Select Course --</option>' + masterTree.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
             syncSubjects();
         }
 
+        // Syncs Subject Selection based on chosen Course
         function syncSubjects() {
             const cId = $('courseSelectDrop').value;
-            if(!cId) { $('subSelectDrop').innerHTML = '<option value="">-- Select Subject --</option>'; return syncTests(); }
+            if(!cId) { 
+                $('subSelectDrop').innerHTML = '<option value="">-- Select Subject --</option>'; 
+                return syncTests(); 
+            }
             const course = masterTree.find(c => c.id == cId);
-            $('subSelectDrop').innerHTML = '<option value="">-- Select Subject --</option>' + course.subjects.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+            if(course && course.subjects) {
+                $('subSelectDrop').innerHTML = '<option value="">-- Select Subject --</option>' + course.subjects.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+            } else {
+                $('subSelectDrop').innerHTML = '<option value="">-- Select Subject --</option>';
+            }
             syncTests();
         }
 
+        // Syncs Test Selection based on chosen Subject
         function syncTests() {
-            const cId = $('courseSelectDrop').value; const sId = $('subSelectDrop').value;
-            if(!cId || !sId) return $('finalTestDrop').innerHTML = '<option value="">-- Select Test --</option>';
-            const subject = masterTree.find(c => c.id == cId).subjects.find(s => s.id == sId);
-            $('finalTestDrop').innerHTML = '<option value="">-- Select Test --</option>' + subject.tests.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+            const cId = $('courseSelectDrop').value; 
+            const sId = $('subSelectDrop').value;
+            if(!cId || !sId) {
+                $('finalTestDrop').innerHTML = '<option value="">-- Select Test --</option>';
+                return;
+            }
+            const course = masterTree.find(c => c.id == cId);
+            const subject = course ? course.subjects.find(s => s.id == sId) : null;
+            
+            if(subject && subject.tests) {
+                $('finalTestDrop').innerHTML = '<option value="">-- Select Test --</option>' + subject.tests.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+            } else {
+                $('finalTestDrop').innerHTML = '<option value="">-- Select Test --</option>';
+            }
         }
 
-        // Structure Creation Core Router
+        // Core Creation Function Handler for Text Structures
         async function createStructureItem(type) {
-            let payload = { type }, targetUrl = '/api/admin/add-content';
+            let payload = { type };
+            const targetUrl = '/api/admin/add-content';
             
             if(type === 'course') {
                 payload.name = $('newCourseName').value.trim();
-                if(!payload.name) return alert("Course name likhein!");
+                if(!payload.name) return alert("Kripya Course Name enter karein!");
             } else if(type === 'subject') {
                 payload.courseId = $('courseSelectDrop').value;
                 payload.name = $('newSubName').value.trim();
-                if(!payload.courseId || !payload.name) return alert("Course select karein aur Subject name likhein!");
+                if(!payload.courseId || !payload.name) return alert("Pehle Course select karein aur Subject Name enter karein!");
             } else if(type === 'test') {
                 payload.courseId = $('courseSelectDrop').value;
                 payload.subjectId = $('subSelectDrop').value;
                 payload.name = $('newTestName').value.trim();
-                if(!payload.subjectId || !payload.name) return alert("Subject select karein aur Test name likhein!");
+                if(!payload.subjectId || !payload.name) return alert("Pehle Subject select karein aur Test Name enter karein!");
             }
 
-            if((await fetch(targetUrl, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) })).ok) {
-                alert(`🎉 New ${type.toUpperCase()} Created!`);
+            const response = await fetch(targetUrl, { 
+                method:'POST', 
+                headers:{'Content-Type':'application/json'}, 
+                body:JSON.stringify(payload) 
+            });
+
+            if(response.ok) {
+                alert(`🎉 Badhai ho! Naya ${type.toUpperCase()} text structure mein add ho gaya.`);
                 $('newCourseName').value = ""; $('newSubName').value = ""; $('newTestName').value = "";
                 await reloadStructureTree();
+            } else {
+                alert("Data save karne mein dikkat aayi, server response check karein.");
             }
         }
 
-        // Bulk JSON Question Upload Engine mapped to direct Test ID
+        // Bulk JSON Question Injector Engine mapped to selected node
         async function uploadBulkQuestions() {
             const testId = $('finalTestDrop').value;
             const rawJson = $('bulkJsonInput').value.trim();
-            if(!testId) return alert("Kripya niche push karne ke liye pehle Target Test select karein!");
-            if(!rawJson) return alert("JSON Textarea khali hai!");
+            if(!testId) return alert("Kripya JSON push karne se pehle Step-3 mein Target Test select karein!");
+            if(!rawJson) return alert("JSON Textarea field khali hai!");
 
             try {
                 const parsedArr = JSON.parse(rawJson);
+                if(!Array.isArray(parsedArr)) return alert("JSON format ek array [ ... ] hona chahiye!");
+
                 const res = await fetch('/api/admin/bulk-upload-questions', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ testId, questions: parsedArr })
                 });
-                if(res.ok) { alert("🎉 Badhai ho! Saare sawaal successfully Test me bulk inject ho gaye!"); $('bulkJsonInput').value = ""; }
-            } catch(e) { alert("❌ Galat JSON Syntax! Format ko tightly re-check karein."); }
+                
+                if(res.ok) { 
+                    alert("🎉 Success! Saare questions chune huye Test mein inject ho gaye hain."); 
+                    $('bulkJsonInput').value = ""; 
+                } else {
+                    alert("Server Refusal: Questions save nahi ho paye.");
+                }
+            } catch(e) { 
+                alert("❌ Bad JSON Syntax Structure! Kripya quotes (\"\"), commas (,) aur brackets check karein."); 
+            }
         }
 
-        // Broadcast Notice
+        // Live Notice Broadcast Engine
         async function updateNotice() {
             const txt = $('noticeInput').value.trim(); if(!txt) return alert("Notice khali nahi ho sakta!");
-            if((await fetch('/api/notice', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({notice:txt}) })).ok) alert("🎉 Broadcast Success!");
+            if((await fetch('/api/notice', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({notice:txt}) })).ok) alert("🎉 Notice Broadcast Done!");
         }
 
-        // Leaderboard Dropdown filters
-        离开 loop logic
+        // Table Filtering Functions
         function fillDrop(id, set) { const el = $(id); el.innerHTML = '<option value="">All</option>'; set.forEach(v => el.innerHTML += `<option value="${v}">${v}</option>`); }
         function filterDrop(col, val) { document.querySelectorAll("#adminResultTable tr").forEach(row => row.style.display = (val === "" || (row.children[col] && row.children[col].innerText.trim() === val)) ? "" : "none"); }
         function searchTable() { const val = $('adminSearch').value.toLowerCase(); document.querySelectorAll("#adminResultTable tr").forEach(row => row.style.display = row.innerText.toLowerCase().includes(val) ? "" : "none"); }
-
-        // Event hooks for structural selections
-        $('subSelectDrop').addEventListener('change', syncTests);
 
         window.onload = initAdmin;
     </script>
