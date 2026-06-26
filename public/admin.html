@@ -9,8 +9,21 @@
         .header { background: #0f172a; color: white; padding: 15px 20px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; }
         .box { background: var(--box); padding: 20px; border-radius: 12px; margin-top: 20px; box-shadow: var(--sh); }
         h3 { margin: 0 0 15px 0; font-size: 18px; border-left: 5px solid var(--prim); padding-left: 10px; }
-        .stats-grid { display: flex; gap: 20px; margin-top: 15px; }
-        .stat-card { flex: 1; background: #e0f2fe; padding: 15px; border-radius: 8px; text-align: center; border-left: 5px solid #0369a1; }
+        
+        /* Quick Live Stats Chart Grid */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-top: 15px; }
+        .stat-card { background: #ffffff; padding: 20px; border-radius: 10px; text-align: center; border-bottom: 4px solid #cbd5e1; box-shadow: var(--sh); transition: 0.2s; }
+        .stat-card:hover { transform: translateY(-3px); }
+        .stat-card h4 { margin: 0; color: #64748b; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .stat-card p { font-size: 28px; font-weight: 800; margin: 8px 0 0 0; color: #0f172a; }
+        
+        /* Color themes for live charts/counters */
+        .c-course { border-color: #10b981; } .c-course p { color: #10b981; }
+        .c-subject { border-color: #f59e0b; } .c-subject p { color: #d97706; }
+        .c-test { border-color: #3b82f6; } .c-test p { color: #2563eb; }
+        .c-question { border-color: #8b5cf6; } .c-question p { color: #7c3aed; }
+        .c-sub { border-color: #ec4899; } .c-sub p { color: #db2777; }
+
         input, textarea, select { width: 100%; padding: 8px; margin-bottom: 10px; border-radius: 6px; border: 1px solid #cbd5e1; box-sizing: border-box; }
         button { background: var(--prim); color: white; border: none; padding: 10px 15px; font-weight: bold; border-radius: 6px; cursor: pointer; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
@@ -22,24 +35,27 @@
 <body>
 
     <div class="header">
-        <h2>🛠️ CGTS Control Admin</h2>
+        <h2>🛠️ CGTS Control Admin Panel</h2>
         <button style="background:#ef4444;" onclick="localStorage.clear(); location.href='index.html';">Logout</button>
-    </div>
-
-    <div class="stats-grid">
-        <div class="stat-card"><h4>Total Submissions</h4><p id="totalCount" style="font-size:24px; font-weight:bold; margin:5px 0 0 0;">0</p></div>
-        <div class="stat-card" style="background:#dcfce7; border-left-color:#15803d;"><h4>Unique Subjects</h4><p id="totalSubs" style="font-size:24px; font-weight:bold; margin:5px 0 0 0; color:#15803d;">0</p></div>
     </div>
 
     <div class="box">
         <h3>📢 Student Notice Banner</h3>
-        <textarea id="noticeInput" rows="2" placeholder="Live marquee notice likhein..."></textarea>
+        <textarea id="noticeInput" rows="2" placeholder="Live marquee notice text yahan likhein..."></textarea>
         <button onclick="updateNotice()">🚀 Broadcast Notice</button>
     </div>
 
+    <div class="stats-grid">
+        <div class="stat-card c-course"><h4>Total Courses</h4><p id="cntCourse">0</p></div>
+        <div class="stat-card c-subject"><h4>Total Subjects</h4><p id="cntSubject">0</p></div>
+        <div class="stat-card c-test"><h4>Total Tests</h4><p id="cntTest">0</p></div>
+        <div class="stat-card c-question"><h4>Total Questions</h4><p id="cntQuestion">0</p></div>
+        <div class="stat-card c-sub" style="background:#f0fdf4;"><h4>Submissions</h4><p id="totalCount">0</p></div>
+    </div>
+
     <div class="box">
-        <h3>📊 Results Database</h3>
-        <input type="text" id="adminSearch" placeholder="🔍 Student Name ya Mobile se filter karein..." onkeyup="searchTable()">
+        <h3>📊 Results & Leaderboard Database</h3>
+        <input type="text" id="adminSearch" placeholder="🔍 Student Name ya Mobile number se direct search karein..." onkeyup="searchTable()">
         <table>
             <thead>
                 <tr>
@@ -49,7 +65,7 @@
                     <th>Score</th><th>Date</th>
                 </tr>
             </thead>
-            <tbody id="adminResultTable"><tr><td colspan="6" style="text-align:center;">Loading...</td></tr></tbody>
+            <tbody id="adminResultTable"><tr><td colspan="6" style="text-align:center;">Loading database matrix...</td></tr></tbody>
         </table>
     </div>
 
@@ -58,32 +74,61 @@
 
         async function initAdmin() {
             try {
-                // Load Current Notice
+                // 1. Load Current Broadcast Announcement
                 const nRes = await fetch('/api/notice'); const nData = await nRes.json();
                 if(nData.notice) $('noticeInput').value = nData.notice;
 
-                // Load Submissions Matrix
+                // 2. Fetch Master Course/Subject/Test Tree Data for Live Matrix Count
+                const contentRes = await fetch('/api/content'); const contentData = await contentRes.json();
+                calculateLiveSystemStats(contentData);
+
+                // 3. Load Student Exam Submissions Matrix
                 const res = await fetch('/api/leaderboard'); const list = await res.json();
                 let subs = new Set(), tsts = new Set();
                 
-                if(!list.length) return $('adminResultTable').innerHTML = `<tr><td colspan="6" style="text-align:center;">No Data</td></tr>`;
+                if(!list.length) return $('adminResultTable').innerHTML = `<tr><td colspan="6" style="text-align:center;">No Data Available</td></tr>`;
 
                 $('adminResultTable').innerHTML = list.map(l => {
                     let parts = l.testName.split(' | '), sub = parts[0] || 'N/A', tst = parts[1] || l.testName;
                     subs.add(sub); tsts.add(tst);
-                    return `<tr><td><b>${l.studentName}</b></td><td>${l.mobile || 'N/A'}</td><td>${sub}</td><td>${tst}</td><td><mark style="font-weight:bold;">${l.score}</mark></td><td><small>${l.date}</small></td></tr>`;
+                    return `<tr><td><b>${l.studentName}</b></td><td>${l.mobile || 'N/A'}</td><td>${sub}</td><td>${tst}</td><td><mark style="font-weight:bold; background:#fef08a; padding:2px 6px; border-radius:4px;">${l.score}</mark></td><td><small>${l.date}</small></td></tr>`;
                 }).join('');
 
-                $('totalCount').innerText = list.length; $('totalSubs').innerText = subs.size;
+                $('totalCount').innerText = list.length;
                 fillDrop('adminSubDrop', subs); fillDrop('adminTestDrop', tsts);
-            } catch(e) { $('adminResultTable').innerHTML = `<tr><td colspan="6" style="text-align:center; color:red;">Database Error!</td></tr>`; }
+            } catch(e) { $('adminResultTable').innerHTML = `<tr><td colspan="6" style="text-align:center; color:red;">Database Connection Error!</td></tr>`; }
         }
 
+        // Live Deep Counter Engine for system statistics
+        function calculateLiveSystemStats(data) {
+            let courseCount = data.length || 0;
+            let subjectCount = 0, testCount = 0, questionCount = 0;
+
+            data.forEach(c => {
+                if(c.subjects) {
+                    subjectCount += c.subjects.length;
+                    c.subjects.forEach(s => {
+                        if(s.tests) {
+                            testCount += s.tests.length;
+                            s.tests.forEach(t => { if(t.questions) questionCount += t.questions.length; });
+                        }
+                    });
+                }
+            });
+
+            $('cntCourse').innerText = courseCount;
+            $('cntSubject').innerText = subjectCount;
+            $('cntTest').innerText = testCount;
+            $('cntQuestion').innerText = questionCount;
+        }
+
+        // Update Notice Route
         async function updateNotice() {
             const txt = $('noticeInput').value.trim(); if(!txt) return alert("Notice khali nahi ho sakta!");
             if((await fetch('/api/notice', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({notice:txt}) })).ok) alert("🎉 Broadcast Success!");
         }
 
+        // Dropdown Populate & Filter Functions
         function fillDrop(id, set) { const el = $(id); el.innerHTML = '<option value="">All</option>'; set.forEach(v => el.innerHTML += `<option value="${v}">${v}</option>`); }
         function filterDrop(col, val) { document.querySelectorAll("#adminResultTable tr").forEach(row => row.style.display = (val === "" || (row.children[col] && row.children[col].innerText.trim() === val)) ? "" : "none"); }
         function searchTable() { const val = $('adminSearch').value.toLowerCase(); document.querySelectorAll("#adminResultTable tr").forEach(row => row.style.display = row.innerText.toLowerCase().includes(val) ? "" : "none"); }
