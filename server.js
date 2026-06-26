@@ -1,117 +1,166 @@
 const express = require('express');
-const bodyParser = require('body-parser');
+const fs = require('fs');
 const path = require('path');
 const app = express();
-
 const PORT = process.env.PORT || 3000;
 
-app.use(bodyParser.json());
+app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// In-Memory Database
-let students = [];
-let courses = [];
-const ADMIN_CREDENTIALS = { username: 'admin', password: 'cgtsadminpassword' };
+const DATA_FILE = path.join(__dirname, 'data.json');
 
-// --- STUDENT & ADMIN AUTH ROUTES ---
+// Default initial database structure
+function initDatabase() {
+    if (!fs.existsSync(DATA_FILE)) {
+        const initialData = {
+            students: [],
+            content: []
+        };
+        fs.writeFileSync(DATA_FILE, JSON.stringify(initialData, null, 2));
+    }
+}
+initDatabase();
+
+function readData() {
+    return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
+}
+
+function writeData(data) {
+    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
+}
+
+// ---------------- SERVER ROUTING & APIS ----------------
+
+// 1. Student Registration
 app.post('/api/register', (req, res) => {
     const { name, mobile, password } = req.body;
-    if (!name || !mobile || !password) return res.status(400).json({ message: 'Sabhi jankari bharna anivarya hai' });
-    if (students.find(s => s.mobile === mobile)) return res.status(400).json({ message: 'Yeh mobile number pehle se registered hai' });
+    const data = readData();
+    
+    const exists = data.students.find(s => s.mobile === mobile);
+    if (exists) {
+        return res.json({ success: false, message: 'Yeh mobile number pehle se registered hai!' });
+    }
 
-    students.push({ id: Date.now(), name, mobile, password, status: 'pending' });
-    res.json({ message: 'Registration safal! CGTS Admin ke approval ka intezar karein.' });
+    const newStudent = {
+        id: Date.now(),
+        name,
+        mobile,
+        password,
+        status: 'pending'
+    };
+    data.students.push(newStudent);
+    writeData(data);
+    res.json({ success: true, message: 'Registration safal raha! Admin approval ka intezar karein.' });
 });
 
+// 2. Student Login
 app.post('/api/login', (req, res) => {
     const { mobile, password } = req.body;
-    const student = students.find(s => s.mobile === mobile && s.password === password);
-    if (!student) return res.status(400).json({ message: 'Galat Mobile number ya Password' });
-    if (student.status !== 'approved') return res.status(403).json({ message: 'Aapka account abhi CGTS Admin se approved nahi hua hai.' });
-    res.json({ message: 'Login safal raha', student: { id: student.id, name: student.name } });
+    const data = readData();
+    
+    const student = data.students.find(s => s.mobile === mobile && s.password === password);
+    if (!student) {
+        return res.json({ success: false, message: 'Galat Mobile Number ya Password!' });
+    }
+    if (student.status !== 'approved') {
+        return res.json({ success: false, message: 'Aapka account abhi tak approved nahi hua hai. Admin se sampark karein.' });
+    }
+    
+    res.json({ success: true, student: { id: student.id, name: student.name, mobile: student.mobile } });
 });
 
+// 3. SECURE ADMIN LOGIN (No browser packet suggestion leak)
 app.post('/api/admin/login', (req, res) => {
     const { username, password } = req.body;
-    if (username === ADMIN_CREDENTIALS.username && password === ADMIN_CREDENTIALS.password) {
-        res.json({ message: 'Admin login safal' });
-    } else {
-        res.status(401).json({ message: 'Galat Admin Details!' });
+    if (username === 'admin' && password === 'praside1') {
+        return res.json({ success: true, token: 'cgts_admin_authenticated_secure_2026' });
     }
+    res.status(401).json({ success: false, message: 'Galat Admin ID ya Password!' });
 });
 
-// --- ADMIN MANAGEMENT ROUTES ---
-app.get('/api/admin/students', (req, res) => res.json(students));
+// 4. Get Student List for Admin (Visible Passwords as requested)
+app.get('/api/admin/students', (req, res) => {
+    const data = readData();
+    res.json(data.students);
+});
 
+// 5. Update Student Status (Approve/Delete)
 app.post('/api/admin/student-status', (req, res) => {
     const { id, status } = req.body;
+    let data = readData();
+    
     if (status === 'delete') {
-        students = students.filter(s => s.id !== id);
-        return res.json({ message: 'Student delete ho gaya' });
+        data.students = data.students.filter(s => s.id !== id);
+    } else {
+        const student = data.students.find(s => s.id === id);
+        if (student) student.status = status;
     }
-    const student = students.find(s => s.id === id);
-    if (student) student.status = status;
-    res.json({ message: 'Status update ho gaya' });
+    
+    writeData(data);
+    res.json({ success: true });
 });
 
+// 6. Get Test Content for Students & Admin Tree
 app.get('/api/content', (req, res) => {
-    const visibleContent = courses.filter(c => !c.hidden).map(c => ({
-        ...c,
-        subjects: c.subjects.filter(s => !s.hidden).map(s => ({
-            ...s,
-            tests: s.tests.filter(t => !t.hidden)
-        }))
-    }));
-    res.json(visibleContent);
+    const data = readData();
+    res.json(data.content);
+});
+app.get('/api/admin/content', (req, res) => {
+    const data = readData();
+    res.json(data.content);
 });
 
-app.get('/api/admin/content', (req, res) => res.json(courses));
-
+// 7. Course Manage (Create/Delete)
 app.post('/api/admin/course', (req, res) => {
     const { action, courseId, name } = req.body;
-    if (action === 'create') courses.push({ id: Date.now(), name, hidden: false, subjects: [] });
-    else if (action === 'delete') courses = courses.filter(c => c.id !== courseId);
-    else if (action === 'toggle-hide') {
-        const course = courses.find(c => c.id === courseId);
-        if (course) course.hidden = !course.hidden;
+    let data = readData();
+
+    if (action === 'create') {
+        data.content.push({ id: Date.now(), name, subjects: [] });
+    } else if (action === 'delete') {
+        data.content = data.content.filter(c => c.id !== courseId);
     }
-    res.json({ message: 'Success' });
+    writeData(data);
+    res.json({ success: true });
 });
 
+// 8. Subject Manage (Create/Delete)
 app.post('/api/admin/subject', (req, res) => {
     const { action, courseId, subjectId, name } = req.body;
-    const course = courses.find(c => c.id === courseId);
-    if (!course) return res.status(404).json({ message: 'Course nahi mila' });
-    if (action === 'create') course.subjects.push({ id: Date.now(), name, hidden: false, tests: [] });
-    else if (action === 'delete') course.subjects = course.subjects.filter(s => s.id !== subjectId);
-    else if (action === 'toggle-hide') {
-        const subject = course.subjects.find(s => s.id === subjectId);
-        if (subject) subject.hidden = !subject.hidden;
+    let data = readData();
+    const course = data.content.find(c => c.id === courseId);
+
+    if (course) {
+        if (action === 'create') {
+            course.subjects.push({ id: Date.now(), name, tests: [] });
+        } else if (action === 'delete') {
+            course.subjects = course.subjects.filter(s => s.id !== subjectId);
+        }
     }
-    res.json({ message: 'Success' });
+    writeData(data);
+    res.json({ success: true });
 });
 
+// 9. Test & Bulk Custom Questions Array Management
 app.post('/api/admin/test', (req, res) => {
     const { action, courseId, subjectId, testId, name, questions } = req.body;
-    const course = courses.find(c => c.id === courseId);
-    const subject = course?.subjects.find(s => s.id === subjectId);
-    if (!subject) return res.status(404).json({ message: 'Subject nahi mila' });
+    let data = readData();
+    const course = data.content.find(c => c.id === courseId);
+    if (!course) return res.json({ success: false });
+    const subject = course.subjects.find(s => s.id === subjectId);
+    if (!subject) return res.json({ success: false });
 
-    if (action === 'create') subject.tests.push({ id: Date.now(), name, hidden: false, questions: [] });
-    else if (action === 'delete') subject.tests = subject.tests.filter(t => t.id !== testId);
-    else if (action === 'toggle-hide') {
-        const test = subject.tests.find(t => t.id === testId);
-        if (test) test.hidden = !test.hidden;
+    if (action === 'create') {
+        subject.tests.push({ id: Date.now(), name, questions: [] });
+    } else if (action === 'delete') {
+        subject.tests = subject.tests.filter(t => t.id !== testId);
     } else if (action === 'update-questions') {
         const test = subject.tests.find(t => t.id === testId);
         if (test) test.questions = questions;
     }
-    res.json({ message: 'Success' });
+
+    writeData(data);
+    res.json({ success: true });
 });
 
-app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-app.listen(PORT, () => console.log(`CGTS Server active on port ${PORT}`));
-
+app.listen(PORT, () => console.log(`Server running smoothly on port ${PORT}`));
