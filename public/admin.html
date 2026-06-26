@@ -2,118 +2,51 @@
 <html lang="hi">
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CGTS Admin Control Center</title>
+    <title>CGTS Admin Bulk Control Panel</title>
     <style>
         :root { --bg: #f1f5f9; --text: #0f172a; --box: #ffffff; --prim: #0284c7; --sh: 0 4px 6px -1px rgba(0,0,0,0.05); }
         body { font-family: system-ui, sans-serif; margin: 20px; background: var(--bg); color: var(--text); }
         .header { background: #0f172a; color: white; padding: 15px 20px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; }
         .box { background: var(--box); padding: 20px; border-radius: 12px; margin-top: 20px; box-shadow: var(--sh); }
         h3 { margin: 0 0 15px 0; font-size: 18px; border-left: 5px solid var(--prim); padding-left: 10px; }
-        
-        /* Form & Input Layout */
-        .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 15px; }
-        .form-group { display: flex; flex-direction: column; }
-        label { font-weight: 600; font-size: 14px; margin-bottom: 5px; color: #475569; }
-        input, textarea, select { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; box-sizing: border-box; font-size: 14px; }
-        textarea { resize: vertical; }
-        
-        /* Action Buttons */
+        input, textarea, select { width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 6px; border: 1px solid #cbd5e1; box-sizing: border-box; font-size: 14px; font-family: monospace; }
         button { background: var(--prim); color: white; border: none; padding: 10px 20px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s; }
         button:hover { opacity: 0.9; }
-        .btn-success { background: #10b981; }
-        
-        /* Table Style */
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { border: 1px solid #e2e8f0; padding: 10px; text-align: left; font-size: 14px; }
         th { background: #f8fafc; color: #475569; }
-        .table-select { padding: 4px; margin-top: 5px; font-size: 12px; }
+        .table-select { padding: 4px; margin-top: 5px; font-size: 12px; font-family: system-ui; }
+        .format-guide { background: #f8fafc; padding: 12px; border-radius: 6px; border: 1px dashed #cbd5e1; font-size: 12px; color: #475569; margin-bottom: 15px; font-family: monospace; line-height: 1.4; }
     </style>
 </head>
 <body>
 
-    <!-- Header Navigation -->
     <div class="header">
-        <h2>🛠️ CGTS Management Control Panel</h2>
-        <button style="background:#ef4444;" onclick="localStorage.clear(); location.href='index.html';">Secure Logout</button>
+        <h2>🛠️ CGTS Bulk Engine Control Panel</h2>
+        <button style="background:#ef4444;" onclick="localStorage.clear(); location.href='index.html';">Logout</button>
     </div>
 
-    <!-- 1. BROADCAST MESSAGE SECTION -->
     <div class="box">
         <h3>📢 Student Notice Banner</h3>
-        <textarea id="noticeInput" rows="2" placeholder="Live marquee notice text yahan likhein..."></textarea>
+        <textarea id="noticeInput" rows="2" style="font-family:system-ui;" placeholder="Live marquee notice text yahan likhein..."></textarea>
         <button onclick="updateNotice()">🚀 Broadcast Notice</button>
     </div>
 
-    <!-- 2. DATA ENTRY PANEL (COURSE, SUBJECT, TEST, QUESTION DALNE KA OPTION) -->
-    <div class="box" style="border-top: 4px solid var(--prim);">
-        <h3>📥 Add & Create Live System Content</h3>
+    <div class="box" style="border-top: 4px solid #8b5cf6;">
+        <h3>⚡ Bulk Upload Content (JSON Format)</h3>
         
-        <!-- Form Fields Layer -->
-        <div class="form-row">
-            <div class="form-group">
-                <label>Select Target Course</label>
-                <select id="formCourseSelect" onchange="syncSubjectDropdown()">
-                    <option value="">-- Choose Course --</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label>Select Target Subject</label>
-                <select id="formSubSelect" onchange="syncTestDropdown()">
-                    <option value="">-- Choose Subject (Select Course First) --</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label>Select Target Test</label>
-                <select id="formTestSelect">
-                    <option value="">-- Choose Test (Select Subject First) --</option>
-                </select>
-            </div>
+        <div class="format-guide">
+            <strong>📌 JSON Format Guide Reference:</strong><br>
+            { "courseName": "UP Police", "subjectName": "Hindi", "testName": "Mock 01", "questions": [ { "qText": "Sawaal yahan likhein?", "options": ["A", "B", "C", "D"], "ans": "A", "vyakhya": "Explanation text" } ] }
         </div>
 
-        <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;">
-
-        <!-- Text Input Layer for Creations -->
-        <div class="form-row">
-            <div class="form-group" style="grid-column: span 2;">
-                <label>Enter Name / Question Text</label>
-                <textarea id="mainEntryInput" rows="2" placeholder="Course/Subject/Test ka naam, ya Question ka text yahan likhein..."></textarea>
-            </div>
-            <div class="form-group">
-                <label>Correct Answer Key (For Qs Only)</label>
-                <select id="correctAnswerKey">
-                    <option value="">-- Select Ans (A/B/C/D) --</option>
-                    <option value="A">Option A</option><option value="B">Option B</option>
-                    <option value="C">Option C</option><option value="D">Option D</option>
-                </select>
-            </div>
-        </div>
-
-        <!-- Options Block for Question Entry -->
-        <div class="form-row">
-            <div class="form-group"><label>Option A</label><input type="text" id="optA" placeholder="Option A text"></div>
-            <div class="form-group"><label>Option B</label><input type="text" id="optB" placeholder="Option B text"></div>
-            <div class="form-group"><label>Option C</label><input type="text" id="optC" placeholder="Option C text"></div>
-            <div class="form-group"><label>Option D</label><input type="text" id="optD" placeholder="Option D text"></div>
-        </div>
-
-        <div class="form-group" style="margin-bottom: 20px;">
-            <label>Explanation / Vyakhya (For Qs Only)</label>
-            <textarea id="vyakhyaInput" rows="2" placeholder="Sahi uttar ki vyakhya yahan likhein..."></textarea>
-        </div>
-
-        <!-- Action Panel Trigger Buttons -->
-        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-            <button class="btn-success" onclick="saveContentItem('course')">➕ Add New Course</button>
-            <button class="btn-success" onclick="saveContentItem('subject')">📖 Add New Subject</button>
-            <button class="btn-success" onclick="saveContentItem('test')">📝 Add New Test</button>
-            <button style="background: #8b5cf6;" onclick="saveContentItem('question')">❓ Add Question to Test</button>
-        </div>
+        <textarea id="jsonBulkInput" rows="10" placeholder="Apna poora JSON data array ya object yahan paste karein..."></textarea>
+        <button style="background: #8b5cf6;" onclick="uploadBulkJSON()">📤 Push Bulk Content Live</button>
     </div>
 
-    <!-- 3. RESULTS & LEADERBOARD WITH ADVANCED DROPDOWN FILTERS -->
     <div class="box">
         <h3>📊 Results & Leaderboard Database</h3>
-        <input type="text" id="adminSearch" placeholder="🔍 Student Name ya Mobile number se direct search karein..." onkeyup="searchTable()">
+        <input type="text" id="adminSearch" style="font-family:system-ui;" placeholder="🔍 Student Name ya Mobile se filter karein..." onkeyup="searchTable()">
         <table>
             <thead>
                 <tr>
@@ -123,24 +56,20 @@
                     <th>Score</th><th>Date</th>
                 </tr>
             </thead>
-            <tbody id="adminResultTable"><tr><td colspan="6" style="text-align:center;">Loading database records...</td></tr></tbody>
+            <tbody id="adminResultTable"><tr><td colspan="6" style="text-align:center;">Loading records...</td></tr></tbody>
         </table>
     </div>
 
     <script>
         const $ = id => document.getElementById(id);
-        let masterContentData = [];
 
         async function initAdmin() {
             try {
-                // 1. Notice Banner Text Fetch
+                // 1. Fetch Notice
                 const nRes = await fetch('/api/notice'); const nData = await nRes.json();
                 if(nData.notice) $('noticeInput').value = nData.notice;
 
-                // 2. Fetch Core Database Tree for Entry Panels
-                await refreshMasterContent();
-
-                // 3. Load Student Submissions Leaderboard Table
+                // 2. Fetch Leaderboard Submissions
                 const res = await fetch('/api/leaderboard'); const list = await res.json();
                 let subs = new Set(), tsts = new Set();
                 
@@ -153,57 +82,33 @@
                 }).join('');
 
                 fillDrop('adminSubDrop', subs); fillDrop('adminTestDrop', tsts);
-            } catch(e) { $('adminResultTable').innerHTML = `<tr><td colspan="6" style="text-align:center; color:red;">Database Connection Error!</td></tr>`; }
+            } catch(e) { $('adminResultTable').innerHTML = `<tr><td colspan="6" style="text-align:center; color:red;">Database Error!</td></tr>`; }
         }
 
-        // Master Content Architecture Loading & Select Injectors
-        async function refreshMasterContent() {
-            const res = await fetch('/api/content'); masterContentData = await res.json();
-            $('formCourseSelect').innerHTML = '<option value="">-- Choose Course --</option>' + masterContentData.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
-            syncSubjectDropdown();
-        }
-
-        function syncSubjectDropdown() {
-            const cId = $('formCourseSelect').value;
-            if(!cId) { $('formSubSelect').innerHTML = '<option value="">-- Choose Subject --</option>'; return syncTestDropdown(); }
-            const course = masterContentData.find(c => c.id == cId);
-            $('formSubSelect').innerHTML = '<option value="">-- Choose Subject --</option>' + course.subjects.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
-            syncTestDropdown();
-        }
-
-        function syncTestDropdown() {
-            const cId = $('formCourseSelect').value; const sId = $('formSubSelect').value;
-            if(!cId || !sId) return $('formTestSelect').innerHTML = '<option value="">-- Choose Test --</option>';
-            const subject = masterContentData.find(c => c.id == cId).subjects.find(s => s.id == sId);
-            $('formTestSelect').innerHTML = '<option value="">-- Choose Test --</option>' + subject.tests.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
-        }
-
-        // Save Function Router for Course, Subject, Test, Question
-        async function saveContentItem(type) {
-            const val = $('mainEntryInput').value.trim(); if(!val) return alert("Naam ya Text field khali nahi ho sakti!");
+        // JSON Bulk Push Execution
+        async function uploadBulkJSON() {
+            const rawStr = $('jsonBulkInput').value.trim();
+            if(!rawStr) return alert("Kuch JSON data toh dalo bhai!");
             
-            let payload = { type, text: val };
-            payload.courseId = $('formCourseSelect').value;
-            payload.subjectId = $('formSubSelect').value;
-            payload.testId = $('formTestSelect').value;
+            try {
+                const parsedJSON = JSON.parse(rawStr);
+                
+                // Backend API call triggering bulk update route
+                const response = await fetch('/api/admin/bulk-upload', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(parsedJSON)
+                });
 
-            if(type === 'question') {
-                payload.options = [$('optA').value.trim(), $('optB').value.trim(), $('optC').value.trim(), $('optD').value.trim()];
-                payload.ans = $('correctAnswerKey').value;
-                payload.vyakhya = $('vyakhyaInput').value.trim();
-                if(payload.options.includes("") || !payload.ans) return alert("Sabhie Options aur Answer Key bharna compulsory hai!");
+                if(response.ok) {
+                    alert("🎉 Badhai ho! Pura JSON data database me bulk-upload ho gaya.");
+                    $('jsonBulkInput').value = "";
+                } else {
+                    alert("Server error: Data push nahi ho paya.");
+                }
+            } catch(err) {
+                alert("❌ Galat JSON Format! Kripya bracket aur comma properly check karein.");
             }
-
-            // Central API update point for structures
-            const response = await fetch('/api/admin/add-content', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
-            });
-
-            if(response.ok) {
-                alert(`🎉 ${type.toUpperCase()} Successfully Added!`);
-                $('mainEntryInput').value = ""; $('optA').value = ""; $('optB').value = ""; $('optC').value = ""; $('optD').value = ""; $('vyakhyaInput').value = "";
-                await refreshMasterContent();
-            } else { alert("Data save karne me error aayi!"); }
         }
 
         // Live Notice Broadcaster Engine
@@ -212,7 +117,7 @@
             if((await fetch('/api/notice', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({notice:txt}) })).ok) alert("🎉 Broadcast Success!");
         }
 
-        // Dropdown Core Dynamic Matrix Filters
+        // Dropdown Dynamic Filters Logic
         function fillDrop(id, set) { const el = $(id); el.innerHTML = '<option value="">All</option>'; set.forEach(v => el.innerHTML += `<option value="${v}">${v}</option>`); }
         function filterDrop(col, val) { document.querySelectorAll("#adminResultTable tr").forEach(row => row.style.display = (val === "" || (row.children[col] && row.children[col].innerText.trim() === val)) ? "" : "none"); }
         function searchTable() { const val = $('adminSearch').value.toLowerCase(); document.querySelectorAll("#adminResultTable tr").forEach(row => row.style.display = row.innerText.toLowerCase().includes(val) ? "" : "none"); }
