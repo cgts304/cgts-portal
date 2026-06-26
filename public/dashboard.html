@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CGTS - Student Dashboard</title>
+    <title>CGTS - Student Portal & Auto Timer</title>
     <style>
         body { font-family: 'Segoe UI', Arial, sans-serif; margin: 15px; background: #f0f2f5; }
         .header { background: #004085; color: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
@@ -21,6 +21,7 @@
         .vyakhya-box { background: #fff3cd; padding: 10px; border-radius: 5px; margin-top: 8px; border-left: 4px solid #ffc107; font-size: 14px; color: #664d03; }
         .wrong-ans { color: red; font-weight: bold; }
         .right-ans { color: green; font-weight: bold; }
+        .timer-banner { background: #dc3545; color: white; padding: 10px; font-weight: bold; font-size: 18px; text-align: center; border-radius: 6px; position: sticky; top: 0; z-index: 100; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
     </style>
 </head>
 <body>
@@ -35,14 +36,13 @@
     <div id="mainTitle"><h3>Apna Course Chunein</h3></div>
     <div id="displayGrid" class="grid-container"></div>
 
-    <!-- Active Test Section -->
     <div id="testSection" class="test-box hidden">
+        <div id="timerDisplay" class="timer-banner">⏱️ बची हुई समय: --:--</div>
         <h2 id="activeTestTitle" style="color: #004085; text-align:center;"></h2>
         <div id="questionArea"></div>
         <button onclick="submitTest()" style="background: #28a745; color:white; padding: 12px 25px; border:none; border-radius:6px; cursor:pointer; font-size:16px; font-weight:bold; width:100%; margin-top:15px;">Submit Test</button>
     </div>
 
-    <!-- Result / Review Section (Sawal + Jawab + Vyakhya) -->
     <div id="resultSection" class="result-box hidden">
         <h2 style="color: #28a745; text-align: center;">🎉 Test Result & Answers Review</h2>
         <h3 id="scoreDisplay" style="text-align: center; background: #e2f0d9; padding: 10px; border-radius: 5px;"></h3>
@@ -56,6 +56,8 @@
         let selectedCourse = null;
         let selectedSubject = null;
         let activeQuestions = [];
+        let timerInterval = null;
+        let totalSecondsLeft = 0;
 
         async function loadDashboard() {
             const student = JSON.parse(localStorage.getItem('student'));
@@ -67,6 +69,7 @@
         }
 
         function renderCourses() {
+            clearInterval(timerInterval);
             currentLevel = 'courses';
             document.getElementById('backBtn').classList.add('hidden');
             document.getElementById('testSection').classList.add('hidden');
@@ -76,9 +79,7 @@
             
             const grid = document.getElementById('displayGrid');
             grid.innerHTML = '';
-            allData.forEach(c => {
-                grid.innerHTML += `<div class="card course-card" onclick="selectCourse(${c.id})">📚 ${c.name}</div>`;
-            });
+            allData.forEach(c => { grid.innerHTML += `<div class="card course-card" onclick="selectCourse(${c.id})">📚 ${c.name}</div>`; });
         }
 
         function selectCourse(cId) {
@@ -88,9 +89,7 @@
             document.getElementById('mainTitle').innerHTML = "<h3>📖 Select Subject</h3>";
             const grid = document.getElementById('displayGrid');
             grid.innerHTML = '';
-            selectedCourse.subjects.forEach(s => {
-                grid.innerHTML += `<div class="card subject-card" onclick="selectSubject(${s.id})">📘 ${s.name}</div>`;
-            });
+            selectedCourse.subjects.forEach(s => { grid.innerHTML += `<div class="card subject-card" onclick="selectSubject(${s.id})">📘 ${s.name}</div>`; });
         }
 
         function selectSubject(sId) {
@@ -99,26 +98,25 @@
             document.getElementById('mainTitle').innerHTML = "<h3>📝 Select Test</h3>";
             const grid = document.getElementById('displayGrid');
             grid.innerHTML = '';
-            selectedSubject.tests.forEach(t => {
-                grid.innerHTML += `<div class="card test-card" onclick="startTest(${t.id})">✏️ ${t.name}<br><span style="font-size:11px; color:#666; font-weight:normal;">Qs: ${t.questions.length}</span></div>`;
-            });
+            selectedSubject.tests.forEach(t => { grid.innerHTML += `<div class="card test-card" onclick="startTest(${t.id})">✏️ ${t.name}<br><span style="font-size:11px; color:#666; font-weight:normal;">Qs: ${t.questions.length} | Mins: ${t.questions.length}</span></div>`; });
         }
 
         function startTest(tId) {
             const test = selectedSubject.tests.find(t => t.id === tId);
             activeQuestions = test.questions;
+            if(activeQuestions.length === 0) return alert("Is test me koi sawal nahi hai.");
+
             currentLevel = 'active-test';
             document.getElementById('displayGrid').classList.add('hidden');
             document.getElementById('testSection').classList.remove('hidden');
             document.getElementById('activeTestTitle').innerText = test.name;
 
+            // Timer Calculation: 1 Question = 1 Minute (e.g. 10 Qs = 600 Seconds)
+            totalSecondsLeft = activeQuestions.length * 60; 
+            startTimerCountdown();
+
             const qArea = document.getElementById('questionArea');
             qArea.innerHTML = '';
-            if(activeQuestions.length === 0) {
-                qArea.innerHTML = '<p style="color:red;">Is test me koi sawal nahi hai.</p>';
-                return;
-            }
-
             activeQuestions.forEach((q, index) => {
                 qArea.innerHTML += `
                     <div class="q-block">
@@ -131,7 +129,28 @@
             });
         }
 
+        function startTimerCountdown() {
+            clearInterval(timerInterval);
+            updateTimerDisplayHTML();
+            timerInterval = setInterval(() => {
+                totalSecondsLeft--;
+                updateTimerDisplayHTML();
+                if(totalSecondsLeft <= 0) {
+                    clearInterval(timerInterval);
+                    alert("⏰ समय समाप्त हो गया है! आपका टेस्ट ऑटोमैटिक सबमिट किया जा रहा है।");
+                    submitTest();
+                }
+            }, 1000);
+        }
+
+        function updateTimerDisplayHTML() {
+            let mins = Math.floor(totalSecondsLeft / 60);
+            let secs = totalSecondsLeft % 60;
+            document.getElementById('timerDisplay').innerText = `⏱️ बची हुई समय: ${mins < 10 ? '0'+mins : mins}:${secs < 10 ? '0'+secs : secs}`;
+        }
+
         function submitTest() {
+            clearInterval(timerInterval);
             let score = 0;
             const reviewArea = document.getElementById('reviewArea');
             reviewArea.innerHTML = '';
@@ -140,7 +159,6 @@
                 const selected = document.querySelector(`input[name="q${index}"]:checked`);
                 const studentAns = selected ? selected.value : 'Nahi Diya';
                 const isCorrect = studentAns === q.ans;
-                
                 if(isCorrect) score++;
 
                 reviewArea.innerHTML += `
@@ -149,7 +167,7 @@
                         <p>A) ${q.options[0]} | B) ${q.options[1]} | C) ${q.options[2]} | D) ${q.options[3]}</p>
                         <p class="${isCorrect ? 'right-ans' : 'wrong-ans'}">Aapka Jawab: ${studentAns}</p>
                         <p class="right-ans">Sahi Jawab: ${q.ans}</p>
-                        <div class="vyakhya-box"><strong>💡 व्याख्या:</strong> ${q.vyakhya || 'Koi vyakhya available nahi hai.'}</div>
+                        <div class="vyakhya-box"><strong>💡 व्याख्या:</strong> ${q.vyakhya}</div>
                     </div>`;
             });
 
@@ -162,7 +180,7 @@
         function goBack() {
             if (currentLevel === 'subjects') renderCourses();
             else if (currentLevel === 'tests') selectCourse(selectedCourse.id);
-            else if (currentLevel === 'active-test') selectSubject(selectedSubject.id);
+            else if (currentLevel === 'active-test') { if(confirm("Kya aap test beech me chhodna chahte hain? Progress save nahi hogi.")) { renderCourses(); } }
         }
 
         window.onload = loadDashboard;
