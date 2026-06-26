@@ -3,49 +3,97 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CGTS - Assistant Teacher Recruitment</title>
+    <title>CGTS Online Test Portal</title>
     <style>
-        body { font-family: 'Segoe UI', Arial, sans-serif; background: #eef2f7; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; flex-direction: column; }
-        .brand { text-align: center; margin-bottom: 20px; color: #004085; }
-        .container { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; width: 100%; max-width: 800px; padding: 10px; }
-        .box { background: white; padding: 25px; border-radius: 12px; box-shadow: 0px 5px 15px rgba(0,0,0,0.08); width: 320px; box-sizing: border-box; }
-        h2 { margin-top: 0; color: #333; font-size: 22px; text-align: center; border-bottom: 2px solid #0056b3; padding-bottom: 8px; }
-        input { width: 100%; padding: 10px; margin: 12px 0; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
-        button { width: 100%; padding: 11px; background: #28a745; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; }
-        .btn-reg { background: #0056b3; }
-        .admin-link { display: block; text-align: center; margin-top: 20px; color: #6c757d; text-decoration: none; font-size: 14px; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; background: #eef2f7; margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 90vh; }
+        .login-container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; }
+        h1 { color: #004085; margin-bottom: 5px; font-size: 26px; }
+        p { color: #666; margin-top: 0; margin-bottom: 25px; font-size: 14px; }
+        .tabs { display: flex; margin-bottom: 20px; border-bottom: 2px solid #ddd; }
+        .tab { flex: 1; padding: 10px; cursor: pointer; color: #555; font-weight: bold; font-size: 14px; }
+        .active-tab { color: #004085; border-bottom: 3px solid #004085; }
+        .form-group { display: none; text-align: left; }
+        .form-group.active { display: block; }
+        label { font-weight: bold; font-size: 13px; color: #444; }
+        input { width: 100%; padding: 10px; margin: 8px 0 18px 0; box-sizing: border-box; border-radius: 6px; border: 1px solid #ccc; font-size: 14px; }
+        button { width: 100%; background: #004085; color: white; padding: 12px; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; }
+        button:hover { background: #002752; }
     </style>
 </head>
 <body>
 
-    <div class="brand">
-        <h1>CGTS Test Series</h1>
-        <p>Assistant Teacher Recruitment Portal</p>
-    </div>
+    <div class="login-container">
+        <h1>CGTS Portal</h1>
+        <p>Assistant Teacher Recruitment Test</p>
 
-    <div class="container">
-        <div class="box">
-            <h2>Student Login</h2>
-            <input type="text" id="loginMobile" placeholder="Registered Mobile Number">
-            <input type="password" id="loginPassword" placeholder="Password">
-            <button onclick="login()">Login Karein</button>
-            <a href="admin-login.html" class="admin-link">⚙️ Admin Login Panel</a>
+        <div class="tabs">
+            <div id="tab1" class="tab active-tab" onclick="switchTab('studentLogin')">Student Login</div>
+            <div id="tab2" class="tab" onclick="switchTab('studentRegister')">Register</div>
+            <div id="tab3" class="tab" onclick="switchTab('adminLogin')">Admin Zone</div>
         </div>
 
-        <div class="box">
-            <h2>New Registration</h2>
-            <input type="text" id="regName" placeholder="Aapka Pura Naam">
-            <input type="text" id="regMobile" placeholder="Mobile Number">
-            <input type="password" id="regPassword" placeholder="Naya Password Banayein">
-            <button class="btn-reg" onclick="register()">Register Karein</button>
+        <div id="studentLogin" class="form-group active">
+            <label>Mobile Number</label>
+            <input type="text" id="stuLogMobile" placeholder="Apna registered mobile number likhein">
+            <label>Password</label>
+            <input type="password" id="stuLogPass" placeholder="Password daalein">
+            <button onclick="studentLoginProcess()">Sign In</button>
+        </div>
+
+        <div id="studentRegister" class="form-group">
+            <label>Pura Naam (Full Name)</label>
+            <input type="text" id="regName" placeholder="Apna naam likhein">
+            <label>Mobile Number</label>
+            <input type="text" id="regMobile" placeholder="10-digit Mobile Number">
+            <label>Naya Password Set Karein</label>
+            <input type="password" id="regPass" placeholder="Koi aasan password banayein">
+            <button style="background: #28a745;" onclick="studentRegisterProcess()">Register Now</button>
+        </div>
+
+        <div id="adminLogin" class="form-group">
+            <label>Admin Username ID</label>
+            <input type="text" id="adminUser" placeholder="Admin ID" autocomplete="off">
+            <label>Admin Password</label>
+            <input type="password" id="adminPass" placeholder="Admin Password" autocomplete="new-password">
+            <button style="background: #dc3545;" onclick="adminLoginProcess()">Secure Login</button>
         </div>
     </div>
 
     <script>
-        async function register() {
-            const name = document.getElementById('regName').value;
-            const mobile = document.getElementById('regMobile').value;
-            const password = document.getElementById('regPassword').value;
+        function switchTab(tabId) {
+            document.querySelectorAll('.form-group').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(el => el.classList.remove('active-tab'));
+            
+            document.getElementById(tabId).classList.add('active');
+            if(tabId === 'studentLogin') document.getElementById('tab1').classList.add('active-tab');
+            if(tabId === 'studentRegister') document.getElementById('tab2').classList.add('active-tab');
+            if(tabId === 'adminLogin') document.getElementById('tab3').classList.add('active-tab');
+        }
+
+        async function studentLoginProcess() {
+            const mobile = document.getElementById('stuLogMobile').value.trim();
+            const password = document.getElementById('stuLogPass').value.trim();
+            if(!mobile || !password) return alert("Sabh fields bharna zaroori hai!");
+
+            const res = await fetch('/api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ mobile, password })
+            });
+            const data = await res.json();
+            if(data.success) {
+                localStorage.setItem('student', JSON.stringify(data.student));
+                window.location.href = 'dashboard.html';
+            } else {
+                alert(data.message);
+            }
+        }
+
+        async function studentRegisterProcess() {
+            const name = document.getElementById('regName').value.trim();
+            const mobile = document.getElementById('regMobile').value.trim();
+            const password = document.getElementById('regPass').value.trim();
+            if(!name || !mobile || !password) return alert("Kripya sabhi details fill karein!");
 
             const res = await fetch('/api/register', {
                 method: 'POST',
@@ -54,26 +102,32 @@
             });
             const data = await res.json();
             alert(data.message);
+            if(data.success) {
+                switchTab('studentLogin');
+                document.getElementById('regName').value = '';
+                document.getElementById('regMobile').value = '';
+                document.getElementById('regPass').value = '';
+            }
         }
 
-        async function login() {
-            const mobile = document.getElementById('loginMobile').value;
-            const password = document.getElementById('loginPassword').value;
+        async function adminLoginProcess() {
+            const username = document.getElementById('adminUser').value.trim();
+            const password = document.getElementById('adminPass').value.trim();
 
-            const res = await fetch('/api/login', {
+            const res = await fetch('/api/admin/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ mobile, password })
+                body: JSON.stringify({ username, password })
             });
-            const data = await res.json();
-            if(res.ok) {
-                localStorage.setItem('student', JSON.stringify(data.student));
-                window.location.href = 'dashboard.html';
+            
+            if(res.status === 200) {
+                const data = await res.json();
+                localStorage.setItem('adminToken', data.token);
+                window.location.href = 'admin.html';
             } else {
-                alert(data.message);
+                alert("⚠️ Login Failed: Galat Admin ID ya Password!");
             }
         }
     </script>
 </body>
 </html>
-
