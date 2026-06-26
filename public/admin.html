@@ -2,7 +2,7 @@
 <html lang="hi">
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CGTS Admin Dashboard</title>
+    <title>CGTS Admin Control Center</title>
     <style>
         :root { --bg: #f1f5f9; --text: #0f172a; --box: #ffffff; --prim: #0284c7; --sh: 0 4px 6px -1px rgba(0,0,0,0.05); }
         body { font-family: system-ui, sans-serif; margin: 20px; background: var(--bg); color: var(--text); }
@@ -10,49 +10,107 @@
         .box { background: var(--box); padding: 20px; border-radius: 12px; margin-top: 20px; box-shadow: var(--sh); }
         h3 { margin: 0 0 15px 0; font-size: 18px; border-left: 5px solid var(--prim); padding-left: 10px; }
         
-        /* Quick Live Stats Chart Grid */
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-top: 15px; }
-        .stat-card { background: #ffffff; padding: 20px; border-radius: 10px; text-align: center; border-bottom: 4px solid #cbd5e1; box-shadow: var(--sh); transition: 0.2s; }
-        .stat-card:hover { transform: translateY(-3px); }
-        .stat-card h4 { margin: 0; color: #64748b; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; }
-        .stat-card p { font-size: 28px; font-weight: 800; margin: 8px 0 0 0; color: #0f172a; }
+        /* Form & Input Layout */
+        .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 15px; }
+        .form-group { display: flex; flex-direction: column; }
+        label { font-weight: 600; font-size: 14px; margin-bottom: 5px; color: #475569; }
+        input, textarea, select { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; box-sizing: border-box; font-size: 14px; }
+        textarea { resize: vertical; }
         
-        /* Color themes for live charts/counters */
-        .c-course { border-color: #10b981; } .c-course p { color: #10b981; }
-        .c-subject { border-color: #f59e0b; } .c-subject p { color: #d97706; }
-        .c-test { border-color: #3b82f6; } .c-test p { color: #2563eb; }
-        .c-question { border-color: #8b5cf6; } .c-question p { color: #7c3aed; }
-        .c-sub { border-color: #ec4899; } .c-sub p { color: #db2777; }
-
-        input, textarea, select { width: 100%; padding: 8px; margin-bottom: 10px; border-radius: 6px; border: 1px solid #cbd5e1; box-sizing: border-box; }
-        button { background: var(--prim); color: white; border: none; padding: 10px 15px; font-weight: bold; border-radius: 6px; cursor: pointer; }
+        /* Action Buttons */
+        button { background: var(--prim); color: white; border: none; padding: 10px 20px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s; }
+        button:hover { opacity: 0.9; }
+        .btn-success { background: #10b981; }
+        
+        /* Table Style */
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { border: 1px solid #e2e8f0; padding: 10px; text-align: left; font-size: 14px; }
-        th { background: #f8fafc; }
+        th { background: #f8fafc; color: #475569; }
         .table-select { padding: 4px; margin-top: 5px; font-size: 12px; }
     </style>
 </head>
 <body>
 
+    <!-- Header Navigation -->
     <div class="header">
-        <h2>🛠️ CGTS Control Admin Panel</h2>
-        <button style="background:#ef4444;" onclick="localStorage.clear(); location.href='index.html';">Logout</button>
+        <h2>🛠️ CGTS Management Control Panel</h2>
+        <button style="background:#ef4444;" onclick="localStorage.clear(); location.href='index.html';">Secure Logout</button>
     </div>
 
+    <!-- 1. BROADCAST MESSAGE SECTION -->
     <div class="box">
         <h3>📢 Student Notice Banner</h3>
         <textarea id="noticeInput" rows="2" placeholder="Live marquee notice text yahan likhein..."></textarea>
         <button onclick="updateNotice()">🚀 Broadcast Notice</button>
     </div>
 
-    <div class="stats-grid">
-        <div class="stat-card c-course"><h4>Total Courses</h4><p id="cntCourse">0</p></div>
-        <div class="stat-card c-subject"><h4>Total Subjects</h4><p id="cntSubject">0</p></div>
-        <div class="stat-card c-test"><h4>Total Tests</h4><p id="cntTest">0</p></div>
-        <div class="stat-card c-question"><h4>Total Questions</h4><p id="cntQuestion">0</p></div>
-        <div class="stat-card c-sub" style="background:#f0fdf4;"><h4>Submissions</h4><p id="totalCount">0</p></div>
+    <!-- 2. DATA ENTRY PANEL (COURSE, SUBJECT, TEST, QUESTION DALNE KA OPTION) -->
+    <div class="box" style="border-top: 4px solid var(--prim);">
+        <h3>📥 Add & Create Live System Content</h3>
+        
+        <!-- Form Fields Layer -->
+        <div class="form-row">
+            <div class="form-group">
+                <label>Select Target Course</label>
+                <select id="formCourseSelect" onchange="syncSubjectDropdown()">
+                    <option value="">-- Choose Course --</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Select Target Subject</label>
+                <select id="formSubSelect" onchange="syncTestDropdown()">
+                    <option value="">-- Choose Subject (Select Course First) --</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Select Target Test</label>
+                <select id="formTestSelect">
+                    <option value="">-- Choose Test (Select Subject First) --</option>
+                </select>
+            </div>
+        </div>
+
+        <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;">
+
+        <!-- Text Input Layer for Creations -->
+        <div class="form-row">
+            <div class="form-group" style="grid-column: span 2;">
+                <label>Enter Name / Question Text</label>
+                <textarea id="mainEntryInput" rows="2" placeholder="Course/Subject/Test ka naam, ya Question ka text yahan likhein..."></textarea>
+            </div>
+            <div class="form-group">
+                <label>Correct Answer Key (For Qs Only)</label>
+                <select id="correctAnswerKey">
+                    <option value="">-- Select Ans (A/B/C/D) --</option>
+                    <option value="A">Option A</option><option value="B">Option B</option>
+                    <option value="C">Option C</option><option value="D">Option D</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Options Block for Question Entry -->
+        <div class="form-row">
+            <div class="form-group"><label>Option A</label><input type="text" id="optA" placeholder="Option A text"></div>
+            <div class="form-group"><label>Option B</label><input type="text" id="optB" placeholder="Option B text"></div>
+            <div class="form-group"><label>Option C</label><input type="text" id="optC" placeholder="Option C text"></div>
+            <div class="form-group"><label>Option D</label><input type="text" id="optD" placeholder="Option D text"></div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 20px;">
+            <label>Explanation / Vyakhya (For Qs Only)</label>
+            <textarea id="vyakhyaInput" rows="2" placeholder="Sahi uttar ki vyakhya yahan likhein..."></textarea>
+        </div>
+
+        <!-- Action Panel Trigger Buttons -->
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <button class="btn-success" onclick="saveContentItem('course')">➕ Add New Course</button>
+            <button class="btn-success" onclick="saveContentItem('subject')">📖 Add New Subject</button>
+            <button class="btn-success" onclick="saveContentItem('test')">📝 Add New Test</button>
+            <button style="background: #8b5cf6;" onclick="saveContentItem('question')">❓ Add Question to Test</button>
+        </div>
     </div>
 
+    <!-- 3. RESULTS & LEADERBOARD WITH ADVANCED DROPDOWN FILTERS -->
     <div class="box">
         <h3>📊 Results & Leaderboard Database</h3>
         <input type="text" id="adminSearch" placeholder="🔍 Student Name ya Mobile number se direct search karein..." onkeyup="searchTable()">
@@ -65,24 +123,24 @@
                     <th>Score</th><th>Date</th>
                 </tr>
             </thead>
-            <tbody id="adminResultTable"><tr><td colspan="6" style="text-align:center;">Loading database matrix...</td></tr></tbody>
+            <tbody id="adminResultTable"><tr><td colspan="6" style="text-align:center;">Loading database records...</td></tr></tbody>
         </table>
     </div>
 
     <script>
         const $ = id => document.getElementById(id);
+        let masterContentData = [];
 
         async function initAdmin() {
             try {
-                // 1. Load Current Broadcast Announcement
+                // 1. Notice Banner Text Fetch
                 const nRes = await fetch('/api/notice'); const nData = await nRes.json();
                 if(nData.notice) $('noticeInput').value = nData.notice;
 
-                // 2. Fetch Master Course/Subject/Test Tree Data for Live Matrix Count
-                const contentRes = await fetch('/api/content'); const contentData = await contentRes.json();
-                calculateLiveSystemStats(contentData);
+                // 2. Fetch Core Database Tree for Entry Panels
+                await refreshMasterContent();
 
-                // 3. Load Student Exam Submissions Matrix
+                // 3. Load Student Submissions Leaderboard Table
                 const res = await fetch('/api/leaderboard'); const list = await res.json();
                 let subs = new Set(), tsts = new Set();
                 
@@ -94,41 +152,67 @@
                     return `<tr><td><b>${l.studentName}</b></td><td>${l.mobile || 'N/A'}</td><td>${sub}</td><td>${tst}</td><td><mark style="font-weight:bold; background:#fef08a; padding:2px 6px; border-radius:4px;">${l.score}</mark></td><td><small>${l.date}</small></td></tr>`;
                 }).join('');
 
-                $('totalCount').innerText = list.length;
                 fillDrop('adminSubDrop', subs); fillDrop('adminTestDrop', tsts);
             } catch(e) { $('adminResultTable').innerHTML = `<tr><td colspan="6" style="text-align:center; color:red;">Database Connection Error!</td></tr>`; }
         }
 
-        // Live Deep Counter Engine for system statistics
-        function calculateLiveSystemStats(data) {
-            let courseCount = data.length || 0;
-            let subjectCount = 0, testCount = 0, questionCount = 0;
-
-            data.forEach(c => {
-                if(c.subjects) {
-                    subjectCount += c.subjects.length;
-                    c.subjects.forEach(s => {
-                        if(s.tests) {
-                            testCount += s.tests.length;
-                            s.tests.forEach(t => { if(t.questions) questionCount += t.questions.length; });
-                        }
-                    });
-                }
-            });
-
-            $('cntCourse').innerText = courseCount;
-            $('cntSubject').innerText = subjectCount;
-            $('cntTest').innerText = testCount;
-            $('cntQuestion').innerText = questionCount;
+        // Master Content Architecture Loading & Select Injectors
+        async function refreshMasterContent() {
+            const res = await fetch('/api/content'); masterContentData = await res.json();
+            $('formCourseSelect').innerHTML = '<option value="">-- Choose Course --</option>' + masterContentData.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+            syncSubjectDropdown();
         }
 
-        // Update Notice Route
+        function syncSubjectDropdown() {
+            const cId = $('formCourseSelect').value;
+            if(!cId) { $('formSubSelect').innerHTML = '<option value="">-- Choose Subject --</option>'; return syncTestDropdown(); }
+            const course = masterContentData.find(c => c.id == cId);
+            $('formSubSelect').innerHTML = '<option value="">-- Choose Subject --</option>' + course.subjects.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+            syncTestDropdown();
+        }
+
+        function syncTestDropdown() {
+            const cId = $('formCourseSelect').value; const sId = $('formSubSelect').value;
+            if(!cId || !sId) return $('formTestSelect').innerHTML = '<option value="">-- Choose Test --</option>';
+            const subject = masterContentData.find(c => c.id == cId).subjects.find(s => s.id == sId);
+            $('formTestSelect').innerHTML = '<option value="">-- Choose Test --</option>' + subject.tests.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+        }
+
+        // Save Function Router for Course, Subject, Test, Question
+        async function saveContentItem(type) {
+            const val = $('mainEntryInput').value.trim(); if(!val) return alert("Naam ya Text field khali nahi ho sakti!");
+            
+            let payload = { type, text: val };
+            payload.courseId = $('formCourseSelect').value;
+            payload.subjectId = $('formSubSelect').value;
+            payload.testId = $('formTestSelect').value;
+
+            if(type === 'question') {
+                payload.options = [$('optA').value.trim(), $('optB').value.trim(), $('optC').value.trim(), $('optD').value.trim()];
+                payload.ans = $('correctAnswerKey').value;
+                payload.vyakhya = $('vyakhyaInput').value.trim();
+                if(payload.options.includes("") || !payload.ans) return alert("Sabhie Options aur Answer Key bharna compulsory hai!");
+            }
+
+            // Central API update point for structures
+            const response = await fetch('/api/admin/add-content', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+            });
+
+            if(response.ok) {
+                alert(`🎉 ${type.toUpperCase()} Successfully Added!`);
+                $('mainEntryInput').value = ""; $('optA').value = ""; $('optB').value = ""; $('optC').value = ""; $('optD').value = ""; $('vyakhyaInput').value = "";
+                await refreshMasterContent();
+            } else { alert("Data save karne me error aayi!"); }
+        }
+
+        // Live Notice Broadcaster Engine
         async function updateNotice() {
             const txt = $('noticeInput').value.trim(); if(!txt) return alert("Notice khali nahi ho sakta!");
             if((await fetch('/api/notice', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({notice:txt}) })).ok) alert("🎉 Broadcast Success!");
         }
 
-        // Dropdown Populate & Filter Functions
+        // Dropdown Core Dynamic Matrix Filters
         function fillDrop(id, set) { const el = $(id); el.innerHTML = '<option value="">All</option>'; set.forEach(v => el.innerHTML += `<option value="${v}">${v}</option>`); }
         function filterDrop(col, val) { document.querySelectorAll("#adminResultTable tr").forEach(row => row.style.display = (val === "" || (row.children[col] && row.children[col].innerText.trim() === val)) ? "" : "none"); }
         function searchTable() { const val = $('adminSearch').value.toLowerCase(); document.querySelectorAll("#adminResultTable tr").forEach(row => row.style.display = row.innerText.toLowerCase().includes(val) ? "" : "none"); }
