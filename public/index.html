@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+code_content = """<!DOCTYPE html>
 <html lang="hi">
 <head>
     <meta charset="UTF-8">
@@ -15,52 +15,84 @@
         input, textarea, select { width: 100%; padding: 10px; margin: 8px 0; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
         button { background-color: #0070f3; color: white; padding: 12px 15px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; width: 100%; font-weight: bold; }
         button:hover { background-color: #0056b3; }
-        .question-card { background: #eef2f7; padding: 15px; margin: 15px 0; border-radius: 6px; border-left: 5px solid #0070f3; }
+        .danger-btn { background-color: #dc3545; font-size: 12px; padding: 6px 12px; width: auto; margin-top: 5px; }
+        .danger-btn:hover { background-color: #bd2130; }
+        .logout-btn { background-color: #6c757d; margin-bottom: 20px; }
+        .logout-btn:hover { background-color: #5a6268; }
+        .question-card { background: #eef2f7; padding: 15px; margin: 15px 0; border-radius: 6px; border-left: 5px solid #0070f3; position: relative; }
         .vyakhya-box { background: #fff3cd; color: #856404; padding: 10px; margin-top: 10px; border-radius: 4px; border-left: 3px solid #ffc107; font-size: 14px; display: none; }
         .show-vyakhya-btn { background-color: #28a745; margin-top: 10px; padding: 5px 10px; font-size: 12px; width: auto; }
         .show-vyakhya-btn:hover { background-color: #218838; }
+        .hidden { display: none !important; }
+        .toggle-link { text-align: center; margin-top: 15px; font-size: 14px; }
+        .toggle-link a { color: #0070f3; text-decoration: none; font-weight: bold; }
     </style>
 </head>
 <body>
 
-    <!-- 1. STUDENT REGISTRATION FORM -->
-    <div class="container" id="reg-container">
-        <h2>Student Registration</h2>
-        <form id="regForm">
-            <input type="text" id="studentName" placeholder="Apna Naam Likhein" required>
-            <input type="tel" id="studentMobile" placeholder="Mobile Number (10 Digits)" pattern="[0-9]{10}" required>
-            <input type="password" id="studentPassword" placeholder="Password Banayein" required>
-            <button type="submit">Register Karein</button>
-        </form>
+    <!-- ================= 1. AUTH SCREEN (LOGIN / REGISTRATION) ================= -->
+    <div id="auth-screen" class="container">
+        <!-- LOGIN FORM -->
+        <div id="login-box">
+            <h2>Student / Admin Login</h2>
+            <form id="loginForm">
+                <input type="tel" id="loginMobile" placeholder="Mobile Number (Student) ya 'admin'" required>
+                <input type="password" id="loginPassword" placeholder="Password" required>
+                <button type="submit">Login Karein</button>
+            </form>
+            <div class="toggle-link">
+                Naye student hain? <a href="#" onclick="switchAuth(false)">Yahan Register Karein</a>
+            </div>
+        </div>
+
+        <!-- REGISTRATION FORM -->
+        <div id="register-box" class="hidden">
+            <h2>Student Registration</h2>
+            <form id="regForm">
+                <input type="text" id="studentName" placeholder="Apna Naam Likhein" required>
+                <input type="tel" id="studentMobile" placeholder="Mobile Number (10 Digits)" pattern="[0-9]{10}" required>
+                <input type="password" id="studentPassword" placeholder="Password Banayein" required>
+                <button type="submit">Register Karein</button>
+            </form>
+            <div class="toggle-link">
+                Pehle se account hai? <a href="#" onclick="switchAuth(true)">Yahan Login Karein</a>
+            </div>
+        </div>
     </div>
 
-    <!-- 2. ADMIN PANEL: ADD QUESTIONS -->
-    <div class="container">
-        <h2>Add New Question (Admin Panel)</h2>
-        <form id="quizForm">
-            <textarea id="qText" rows="3" placeholder="Sawal (Question) Likhein" required></textarea>
-            <input type="text" id="optA" placeholder="Option A" required>
-            <input type="text" id="optB" placeholder="Option B" required>
-            <input type="text" id="optC" placeholder="Option C" required>
-            <input type="text" id="optD" placeholder="Option D" required>
-            
-            <select id="correctOpt" required>
-                <option value="">Correct Answer Select Karein</option>
-                <option value="A">Option A</option>
-                <option value="B">Option B</option>
-                <option value="C">Option C</option>
-                <option value="D">Option D</option>
-            </select>
-            
-            <textarea id="vyakhyaText" rows="2" placeholder="Vyakhya (Explanation) Likhein (Optional)"></textarea>
-            <button type="submit">Save Question</button>
-        </form>
-    </div>
+    <!-- ================= 2. MAIN APP SCREEN (LOGGED IN) ================= -->
+    <div id="main-app" class="container hidden">
+        <button class="logout-btn" onclick="logout()">Logout Logout</button>
+        <h3 id="welcome-msg">Welcome!</h3>
 
-    <!-- 3. LIVE QUIZ DISPLAY -->
-    <div class="container">
-        <h2>Live Questions</h2>
-        <div id="questions-list">Questions load ho rahe hain...</div>
+        <!-- ADMIN PANEL: ONLY VISIBLE TO ADMIN -->
+        <div id="admin-panel" class="hidden">
+            <h2>Add New Question (Admin Panel)</h2>
+            <form id="quizForm">
+                <textarea id="qText" rows="3" placeholder="Sawal (Question) Likhein" required></textarea>
+                <input type="text" id="optA" placeholder="Option A" required>
+                <input type="text" id="optB" placeholder="Option B" required>
+                <input type="text" id="optC" placeholder="Option C" required>
+                <input type="text" id="optD" placeholder="Option D" required>
+                
+                <select id="correctOpt" required>
+                    <option value="">Correct Answer Select Karein</option>
+                    <option value="A">Option A</option>
+                    <option value="B">Option B</option>
+                    <option value="C">Option C</option>
+                    <option value="D">Option D</option>
+                </select>
+                
+                <textarea id="vyakhyaText" rows="2" placeholder="Vyakhya (Explanation) Likhein (Optional)"></textarea>
+                <button type="submit">Save Question</button>
+            </form>
+        </div>
+
+        <!-- LIVE QUIZ DISPLAY (VISIBLE TO BOTH) -->
+        <div style="margin-top: 30px;">
+            <h2>Live Questions</h2>
+            <div id="questions-list">Questions load ho rahe hain...</div>
+        </div>
     </div>
 
     <script>
@@ -69,7 +101,52 @@
         const SUPABASE_KEY = "sb_publishable_AwPqYNdIpPyUOoZngM4nMg_bw0_NgJx";
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // --- 1. STUDENT REGISTRATION ---
+        let currentUser = null;
+        let isAdmin = false;
+
+        // Auth Screen Switcher
+        function switchAuth(showLogin) {
+            if (showLogin) {
+                document.getElementById('login-box').classList.remove('hidden');
+                document.getElementById('register-box').classList.add('hidden');
+            } else {
+                document.getElementById('login-box').classList.add('hidden');
+                document.getElementById('register-box').classList.remove('hidden');
+            }
+        }
+
+        // --- LOGIN LOGIC ---
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const mobile = document.getElementById('loginMobile').value.trim();
+            const password = document.getElementById('loginPassword').value;
+
+            // Admin Hardcoded Login Check
+            if (mobile.toLowerCase() === 'admin' && password === 'admin123') {
+                currentUser = { name: "Admin" };
+                isAdmin = true;
+                showMainApp();
+                return;
+            }
+
+            // Student Login Check via Supabase
+            const { data, error } = await _supabase
+                .from('students')
+                .select('*')
+                .eq('mobile', mobile)
+                .eq('password', password)
+                .single();
+
+            if (error || !data) {
+                alert("Galat Mobile Number ya Password!");
+            } else {
+                currentUser = data;
+                isAdmin = false;
+                showMainApp();
+            }
+        });
+
+        // --- STUDENT REGISTRATION ---
         document.getElementById('regForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const name = document.getElementById('studentName').value;
@@ -83,12 +160,36 @@
             if (error) {
                 alert("Registration Failed: " + error.message);
             } else {
-                alert("Student Registered Successfully!");
+                alert("Registration Successful! Ab aap login kar sakte hain.");
                 document.getElementById('regForm').reset();
+                switchAuth(true);
             }
         });
 
-        // --- 2. SAVE QUESTION (ADMIN) ---
+        // Show Main Dashboard
+        function showMainApp() {
+            document.getElementById('auth-screen').classList.add('hidden');
+            document.getElementById('main-app').classList.remove('hidden');
+            document.getElementById('welcome-msg').innerText = `Namaste, ${currentUser.name}!`;
+
+            if (isAdmin) {
+                document.getElementById('admin-panel').classList.remove('hidden');
+            } else {
+                document.getElementById('admin-panel').classList.add('hidden');
+            }
+            loadQuestions();
+        }
+
+        // Logout
+        function logout() {
+            currentUser = null;
+            isAdmin = false;
+            document.getElementById('main-app').classList.add('hidden');
+            document.getElementById('auth-screen').classList.remove('hidden');
+            document.getElementById('loginForm').reset();
+        }
+
+        // --- SAVE QUESTION (ADMIN ONLY) ---
         document.getElementById('quizForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const qtext = document.getElementById('qText').value;
@@ -108,11 +209,28 @@
             } else {
                 alert("Question Saved Successfully!");
                 document.getElementById('quizForm').reset();
-                loadQuestions(); // List refresh karne ke liye
+                loadQuestions();
             }
         });
 
-        // --- 3. LOAD QUESTIONS ---
+        // --- DELETE QUESTION (ADMIN ONLY) ---
+        async function deleteQuestion(id) {
+            if (confirm("Kya aap sach me is question ko delete karna chahte hain?")) {
+                const { error } = await _supabase
+                    .from('questions')
+                    .delete()
+                    .eq('id', id);
+
+                if (error) {
+                    alert("Delete failed: " + error.message);
+                } else {
+                    alert("Question Deleted!");
+                    loadQuestions();
+                }
+            }
+        }
+
+        // --- LOAD QUESTIONS ---
         async function loadQuestions() {
             const container = document.getElementById('questions-list');
             const { data, error } = await _supabase
@@ -134,7 +252,12 @@
             data.forEach((q, index) => {
                 const card = document.createElement('div');
                 card.className = "question-card";
+                
+                // Admin ko Delete button dikhane ke liye condition
+                const deleteBtnHtml = isAdmin ? `<button class="danger-btn" style="float: right;" onclick="deleteQuestion(${q.id})">Delete Q</button>` : '';
+                
                 card.innerHTML = `
+                    ${deleteBtnHtml}
                     <strong>Q${index + 1}: ${q.qtext}</strong><br>
                     <input type="radio" name="q_${q.id}" value="A"> A) ${q.opta}<br>
                     <input type="radio" name="q_${q.id}" value="B"> B) ${q.optb}<br>
@@ -158,9 +281,10 @@
                 box.style.display = "none";
             }
         }
-
-        // Page load hote hi questions load karein
-        window.onload = loadQuestions;
     </script>
 </body>
 </html>
+"""
+
+with open("updated_portal_code.txt", "w", encoding="utf-8") as f:
+    f.write(code_content)
