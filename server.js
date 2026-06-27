@@ -1,179 +1,260 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
+const jwt = require('jsonwebtoken'); // Purane token-based admin auth ke liye
 const app = express();
 const PORT = process.env.PORT || 3000;
+const SECRET_KEY = "CGTS_SUPER_SECRET_KEY"; // Admin authentication signature
 
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(__dirname)); // Static frontend HTML files ko serve karne ke liye
 
-const DATA_FILE = path.join(__dirname, 'data.json');
-
-// Permanent JSON Data Folder aur File checking
-function initDatabase() {
-    if (!fs.existsSync(DATA_FILE)) {
-        const initialData = {
-            students: [],
-            content: [],
-            leaderboard: [],
-            notice: "CGTS Portal me aapka swagat hai!"
-        };
-        fs.writeFileSync(DATA_FILE, JSON.stringify(initialData, null, 2));
-    }
-}
-initDatabase();
-
-function readData() { return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8')); }
-function writeData(data) { fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2)); }
-
-// Student Registration & Auth
-app.post('/api/register', (req, res) => {
-    const { name, mobile, password } = req.body;
-    const data = readData();
-    if (data.students.find(s => s.mobile === mobile)) {
-        return res.json({ success: false, message: 'Yeh mobile number registered hai!' });
-    }
-    data.students.push({ id: Date.now(), name, mobile, password, status: 'pending' });
-    writeData(data);
-    res.json({ success: true, message: 'Registration safal! Admin approval ka wait karein.' });
+// ==========================================
+// 🛡️ CRASH PROTECTION CODE (Server Hamesha Chalu Rakhega)
+// ==========================================
+process.on('uncaughtException', (err) => {
+    console.error('⚠️ SERVER SYSTEM ERROR BLOCKED (Uncaught Exception):', err.message);
+    // Yeh runtime exceptions ko bypass karke server ko band nahi hone dega
 });
 
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('⚠️ PROMISE REJECTION BLOCKED:', reason);
+    // Yeh async-await errors ko lock karega aur runtime chalu rakhega
+});
+
+// ==========================================
+// 💾 PERMANENT DATA STORAGE (JSON FILES SETUP)
+// ==========================================
+const STUDENTS_FILE = path.join(__dirname, 'students.json');
+const CONTENT_FILE = path.join(__dirname, 'content.json');
+const NOTICE_FILE = path.join(__dirname, 'notice.json');
+const LEADERBOARD_FILE = path.join(__dirname, 'leaderboard.json');
+const ADMIN_CONFIG_FILE = path.join(__dirname, 'admin_config.json');
+
+// Defualt files verification aur initial JSON array structural writing
+if (!fs.existsSync(STUDENTS_FILE)) fs.writeFileSync(STUDENTS_FILE, JSON.stringify([]));
+if (!fs.existsSync(CONTENT_FILE)) fs.writeFileSync(CONTENT_FILE, JSON.stringify([]));
+if (!fs.existsSync(NOTICE_FILE)) fs.writeFileSync(NOTICE_FILE, JSON.stringify({ notice: "Welcome to CGTS Online Portal!" }));
+if (!fs.existsSync(LEADERBOARD_FILE)) fs.writeFileSync(LEADERBOARD_FILE, JSON.stringify([]));
+if (!fs.existsSync(ADMIN_CONFIG_FILE)) {
+    fs.writeFileSync(ADMIN_CONFIG_FILE, JSON.stringify({ username: "admin", password: "cgtsadminpassword" }));
+}
+
+// Helpers for reading and updating local file DB state instantly
+const readData = (file) => JSON.parse(fs.readFileSync(file, 'utf8'));
+const writeData = (file, data) => fs.writeFileSync(file, JSON.stringify(data, null, 2), 'utf8');
+
+// Middleware for Admin Route Protection (Puraney logic ke mutabik)
+function verifyAdminToken(req, res, next) {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    if (!token) return res.status(401).json({ message: "Access Denied: Token Missing!" });
+    
+    jwt.verify(token, SECRET_KEY, (err, decoded) => {
+        if (err) return res.status(403).json({ message: "Invalid Token!" });
+        req.admin = decoded;
+        next();
+    });
+}
+
+// ==========================================
+// 📑 PURANE & NAYE MIXED API ENDPOINTS
+// ==========================================
+
+// --- [STUDENT ACCOUNT SECTION] ---
+
+// 1. Student Registration (Data persistent JSON file me save hoga)
+app.post('/api/register', (req, res) => {
+    try {
+        const { name, mobile, password } = req.body;
+        let students = readData(STUDENTS_FILE);
+
+        const exists = students.find(s => s.mobile === mobile);
+        if (exists) return res.status(400).json({ success: false, message: "⚠️ Yeh Mobile Number pehle se registered hai!" });
+
+        const newStudent = { id: Date.now(), name, mobile, password, status: 'pending' };
+        students.push(newStudent);
+        writeData(STUDENTS_FILE, students);
+
+        res.json({ success: true, message: "✅ Registration safalta purvak ho gaya! Admin approval ka intezar karein." });
+    } catch (e) {
+        res.status(500).json({ success: false, message: "Server error occurred." });
+    }
+});
+
+// 2. Student Login Verification
 app.post('/api/login', (req, res) => {
     const { mobile, password } = req.body;
-    const data = readData();
-    const student = data.students.find(s => s.mobile === mobile && s.password === password);
-    if (!student) return res.json({ success: false, message: 'Galat credentials!' });
-    if (student.status !== 'approved') return res.json({ success: false, message: 'Account pending hai!' });
-    res.json({ success: true, student: { id: student.id, name: student.name, mobile: student.mobile } });
+    const students = readData(STUDENTS_FILE);
+    const student = students.find(s => s.mobile === mobile && s.password === password);
+
+    if (!student) return res.json({ success: false, message: "⚠️ Galat mobile number ya password!" });
+    if (student.status !== 'approved') return res.json({ success: false, message: "⚠️ Aapka account abhi tak Admin dwara approve nahi kiya gaya hai!" });
+
+    res.json({ success: true, student });
 });
 
-// Admin Auth & Live Stats Card Counter
+
+// --- [ADMIN AREA SECTION] ---
+
+// 3. Admin Dynamic Verification & Login (Generates JWT)
 app.post('/api/admin/login', (req, res) => {
     const { username, password } = req.body;
-    if (username === 'admin' && password === 'praside1') {
-        return res.json({ success: true, token: 'cgts_admin_secure_2026' });
+    const adminConfig = readData(ADMIN_CONFIG_FILE);
+
+    if (username === adminConfig.username && password === adminConfig.password) {
+        const token = jwt.sign({ user: username }, SECRET_KEY, { expiresIn: '2h' });
+        res.json({ success: true, token });
+    } else {
+        res.status(401).json({ success: false, message: "Galat Admin ID ya Password!" });
     }
-    res.status(401).json({ success: false });
 });
 
-app.get('/api/admin/stats', (req, res) => {
-    const data = readData();
-    const totalStudents = data.students.length;
-    const pendingApprovals = data.students.filter(s => s.status === 'pending').length;
-    const liveApproved = data.students.filter(s => s.status === 'approved').length;
-    
-    let totalTests = 0;
-    data.content.forEach(c => { c.subjects.forEach(s => { totalTests += s.tests.length; }); });
+// 4. Change Admin Credentials Panel API
+app.post('/api/admin/change-credentials', (req, res) => {
+    const { username, password } = req.body;
+    if (!username || !password) return res.status(400).json({ message: "Fields empty!" });
 
-    res.json({ totalStudents, pendingApprovals, liveApproved, totalTests });
+    writeData(ADMIN_CONFIG_FILE, { username, password });
+    res.json({ success: true, message: "Credentials changed successfully!" });
 });
 
-app.get('/api/admin/students', (req, res) => { res.json(readData().students); });
 
-app.post('/api/admin/student-status', (req, res) => {
-    const { id, status } = req.body;
-    let data = readData();
-    if (status === 'delete') data.students = data.students.filter(s => s.id != id);
-    else { const s = data.students.find(st => st.id == id); if(s) s.status = status; }
-    writeData(data); res.json({ success: true });
-});
+// --- [CONTENT & TEST STRUCTURE SYSTEM] ---
 
-// Notice Board APIs
-app.get('/api/notice', (req, res) => { res.json({ notice: readData().notice || "" }); });
-app.post('/api/admin/notice', (req, res) => {
-    const { notice } = req.body;
-    let data = readData();
-    data.notice = notice;
-    writeData(data);
+// 5. Get Live Content Tree Data
+app.get('/api/content', (req, res) => res.json(readData(CONTENT_FILE)));
+app.get('/api/admin/content', (req, res) => res.json(readData(CONTENT_FILE)));
+
+// 6. Manage Courses Matrix
+app.post('/api/admin/course', (req, res) => {
+    const { action, courseId, name } = req.body;
+    let content = readData(CONTENT_FILE);
+
+    if (action === 'create') {
+        content.push({ id: Date.now(), name, subjects: [] });
+    } else if (action === 'delete') {
+        content = content.filter(c => c.id !== courseId);
+    }
+    writeData(CONTENT_FILE, content);
     res.json({ success: true });
 });
 
-// Content Manage Tree
-app.get('/api/content', (req, res) => { res.json(readData().content); });
-app.get('/api/admin/content', (req, res) => { res.json(readData().content); });
-
-app.post('/api/admin/course', (req, res) => {
-    const { action, courseId, name } = req.body;
-    let data = readData();
-    if (action === 'create') data.content.push({ id: Date.now(), name, subjects: [] });
-    else if (action === 'delete') data.content = data.content.filter(c => c.id != courseId);
-    writeData(data); res.json({ success: true });
-});
-
+// 7. Manage Subject Nodes
 app.post('/api/admin/subject', (req, res) => {
     const { action, courseId, subjectId, name } = req.body;
-    let data = readData();
-    const c = data.content.find(co => co.id == courseId);
-    if (c) {
-        if (action === 'create') c.subjects.push({ id: Date.now(), name, tests: [] });
-        else if (action === 'delete') c.subjects = c.subjects.filter(s => s.id != subjectId);
+    let content = readData(CONTENT_FILE);
+    let course = content.find(c => c.id === courseId);
+
+    if (course) {
+        if (action === 'create') {
+            course.subjects.push({ id: Date.now(), name, tests: [] });
+        } else if (action === 'delete') {
+            course.subjects = course.subjects.filter(s => s.id !== subjectId);
+        }
+        writeData(CONTENT_FILE, content);
     }
-    writeData(data); res.json({ success: true });
+    res.json({ success: true });
 });
 
+// 8. Manage Tests & Question Sets
 app.post('/api/admin/test', (req, res) => {
     const { action, courseId, subjectId, testId, name, questions } = req.body;
-    let data = readData();
-    try {
-        const c = data.content.find(co => co.id == courseId);
-        const s = c.subjects.find(su => su.id == subjectId);
-        if (action === 'create') s.tests.push({ id: Date.now(), name, questions: [] });
-        else if (action === 'delete') s.tests = s.tests.filter(t => t.id != testId);
-        else if (action === 'update-questions') { const t = s.tests.find(te => te.id == testId); if (t) t.questions = questions; }
-    } catch(e){}
-    writeData(data); res.json({ success: true });
+    let content = readData(CONTENT_FILE);
+    let course = content.find(c => c.id === courseId);
+    let subject = course?.subjects.find(s => s.id === subjectId);
+
+    if (subject) {
+        if (action === 'create') {
+            subject.tests.push({ id: Date.now(), name, questions: [] });
+        } else if (action === 'delete') {
+            subject.tests = subject.tests.filter(t => t.id !== testId);
+        } else if (action === 'update-questions') {
+            let test = subject.tests.find(t => t.id === testId);
+            if (test) test.questions = questions; // Purane arrays updates persistent rahenge
+        }
+        writeData(CONTENT_FILE, content);
+    }
+    res.json({ success: true });
 });
 
-// Leaderboard Submissions (Dynamic Format Sync Optimized)
-app.post('/api/test/submit', (req, res) => {
-    const { studentName, mobile, testId, testName, score, totalQs } = req.body;
-    let data = readData();
-    if(!data.leaderboard) data.leaderboard = [];
-    
-    // Dynamic Subject Name extraction taaki leaderboard dropdown sync ho sake
-    let formattedTestName = testName;
-    try {
-        data.content.forEach(c => {
-            c.subjects.forEach(s => {
-                const foundTest = s.tests.find(t => t.id == testId);
-                if(foundTest) {
-                    // It saves as: "Bal Vikas | Mock Test 01"
-                    formattedTestName = `${s.name} | ${foundTest.name}`;
-                }
-            });
-        });
-    } catch(err) {}
 
-    const alreadyExists = data.leaderboard.find(log => log.mobile == mobile && log.testId == testId);
+// --- [STUDENT CONTROL & REPORT SYSTEM] ---
+
+// 9. Fetch Real-time Dashboard Stats Counters
+app.get('/api/admin/stats', (req, res) => {
+    const students = readData(STUDENTS_FILE);
+    const content = readData(CONTENT_FILE);
     
-    const attemptLog = {
+    let totalTests = 0;
+    content.forEach(c => c.subjects.forEach(s => totalTests += s.tests.length));
+
+    res.json({
+        totalStudents: students.length,
+        pendingApprovals: students.filter(s => s.status === 'pending').length,
+        liveApproved: students.filter(s => s.status === 'approved').length,
+        totalTests: totalTests
+    });
+});
+
+// 10. Admin Control Student List
+app.get('/api/admin/students', (req, res) => res.json(readData(STUDENTS_FILE)));
+
+// 11. Process Student Approvals / Disapprovals
+app.post('/api/admin/student-status', (req, res) => {
+    const { id, status } = req.body;
+    let students = readData(STUDENTS_FILE);
+    
+    if (status === 'delete') {
+        students = students.filter(s => s.id !== id);
+    } else {
+        let student = students.find(s => s.id === id);
+        if (student) student.status = status;
+    }
+    writeData(STUDENTS_FILE, students);
+    res.json({ success: true });
+});
+
+
+// --- [NOTICE & LEADERBOARD SYNC SYSTEM] ---
+
+// 12. Notice Broadcast Routes
+app.get('/api/notice', (req, res) => res.json(readData(NOTICE_FILE)));
+app.post('/api/admin/notice', (req, res) => {
+    writeData(NOTICE_FILE, req.body);
+    res.json({ success: true });
+});
+
+// 13. Global Leaderboard System (Records Score Submissions dynamically)
+app.get('/api/leaderboard', (req, res) => res.json(readData(LEADERBOARD_FILE)));
+
+app.post('/api/submit-score', (req, res) => {
+    const { studentName, mobile, testName, score, totalQs, extractedSubject, extractedTest } = req.body;
+    let leaderboard = readData(LEADERBOARD_FILE);
+
+    const newScoreLog = {
         id: Date.now(),
         studentName,
         mobile,
-        testId,
-        testName: formattedTestName,
-        score: parseFloat(score),
-        totalQs,
-        date: new Date().toLocaleDateString('hi-IN'),
-        isFirstAttempt: !alreadyExists
+        testName: testName || extractedTest,
+        extractedSubject: extractedSubject || "General",
+        extractedTest: extractedTest || testName,
+        score,
+        totalQs: totalQs || score,
+        date: new Date().toLocaleDateString('hi-IN')
     };
-    data.leaderboard.push(attemptLog);
-    writeData(data);
-    res.json({ success: true, isFirstAttempt: !alreadyExists });
+
+    leaderboard.push(newScoreLog);
+    // Sort leaderboard by top scores before logging to file data sync 
+    leaderboard.sort((a, b) => b.score - a.score);
+    writeData(LEADERBOARD_FILE, leaderboard);
+    
+    res.json({ success: true, message: "Score saved successfully!" });
 });
 
-// Global Dynamic Leaderboard API
-app.get('/api/leaderboard', (req, res) => {
-    const data = readData();
-    const records = data.leaderboard || [];
-    const firstAttempts = records.filter(r => r.isFirstAttempt === true);
-    res.json(firstAttempts.sort((a, b) => b.score - a.score));
+// ==========================================
+// START CRASH-PROOF & PERSISTENT PORTAL SERVER
+// ==========================================
+app.listen(PORT, () => {
+    console.log(`🚀 Combined Server running non-stop at: http://localhost:${PORT}`);
 });
-
-app.get('/api/history/:mobile', (req, res) => {
-    const data = readData();
-    const records = data.leaderboard || [];
-    res.json(records.filter(r => r.mobile == req.params.mobile));
-});
-
-app.listen(PORT, () => console.log(`Server optimized and safely running on port ${PORT}`));
