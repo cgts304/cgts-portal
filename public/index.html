@@ -3,129 +3,164 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CGTS Online Test Portal</title>
+    <title>CG Test Series Portal</title>
+    
+    <!-- Supabase JavaScript SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
     <style>
-        body { font-family: 'Segoe UI', Arial, sans-serif; background: #eef2f7; margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 90vh; }
-        .login-container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; }
-        h1 { color: #004085; margin-bottom: 5px; font-size: 26px; }
-        p { color: #666; margin-top: 0; margin-bottom: 25px; font-size: 14px; }
-        .tabs { display: flex; margin-bottom: 20px; border-bottom: 2px solid #ddd; }
-        .tab { flex: 1; padding: 10px; cursor: pointer; color: #555; font-weight: bold; font-size: 14px; }
-        .active-tab { color: #004085; border-bottom: 3px solid #004085; }
-        .form-group { display: none; text-align: left; }
-        .form-group.active { display: block; }
-        label { font-weight: bold; font-size: 13px; color: #444; }
-        input { width: 100%; padding: 10px; margin: 8px 0 18px 0; box-sizing: border-box; border-radius: 6px; border: 1px solid #ccc; font-size: 14px; }
-        button { width: 100%; background: #004085; color: white; padding: 12px; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; }
-        button:hover { background: #002752; }
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f9; color: #333; }
+        .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        h2 { color: #0070f3; border-bottom: 2px solid #0070f3; padding-bottom: 5px; margin-top: 0; }
+        input, textarea, select { width: 100%; padding: 10px; margin: 8px 0; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
+        button { background-color: #0070f3; color: white; padding: 12px 15px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; width: 100%; font-weight: bold; }
+        button:hover { background-color: #0056b3; }
+        .question-card { background: #eef2f7; padding: 15px; margin: 15px 0; border-radius: 6px; border-left: 5px solid #0070f3; }
+        .vyakhya-box { background: #fff3cd; color: #856404; padding: 10px; margin-top: 10px; border-radius: 4px; border-left: 3px solid #ffc107; font-size: 14px; display: none; }
+        .show-vyakhya-btn { background-color: #28a745; margin-top: 10px; padding: 5px 10px; font-size: 12px; width: auto; }
+        .show-vyakhya-btn:hover { background-color: #218838; }
     </style>
 </head>
 <body>
 
-    <div class="login-container">
-        <h1>CGTS Portal</h1>
-        <p>Assistant Teacher Recruitment Test</p>
+    <!-- 1. STUDENT REGISTRATION FORM -->
+    <div class="container" id="reg-container">
+        <h2>Student Registration</h2>
+        <form id="regForm">
+            <input type="text" id="studentName" placeholder="Apna Naam Likhein" required>
+            <input type="tel" id="studentMobile" placeholder="Mobile Number (10 Digits)" pattern="[0-9]{10}" required>
+            <input type="password" id="studentPassword" placeholder="Password Banayein" required>
+            <button type="submit">Register Karein</button>
+        </form>
+    </div>
 
-        <div class="tabs">
-            <div id="tab1" class="tab active-tab" onclick="switchTab('studentLogin')">Student Login</div>
-            <div id="tab2" class="tab" onclick="switchTab('studentRegister')">Register</div>
-            <div id="tab3" class="tab" onclick="switchTab('adminLogin')">Admin Zone</div>
-        </div>
+    <!-- 2. ADMIN PANEL: ADD QUESTIONS -->
+    <div class="container">
+        <h2>Add New Question (Admin Panel)</h2>
+        <form id="quizForm">
+            <textarea id="qText" rows="3" placeholder="Sawal (Question) Likhein" required></textarea>
+            <input type="text" id="optA" placeholder="Option A" required>
+            <input type="text" id="optB" placeholder="Option B" required>
+            <input type="text" id="optC" placeholder="Option C" required>
+            <input type="text" id="optD" placeholder="Option D" required>
+            
+            <select id="correctOpt" required>
+                <option value="">Correct Answer Select Karein</option>
+                <option value="A">Option A</option>
+                <option value="B">Option B</option>
+                <option value="C">Option C</option>
+                <option value="D">Option D</option>
+            </select>
+            
+            <textarea id="vyakhyaText" rows="2" placeholder="Vyakhya (Explanation) Likhein (Optional)"></textarea>
+            <button type="submit">Save Question</button>
+        </form>
+    </div>
 
-        <div id="studentLogin" class="form-group active">
-            <label>Mobile Number</label>
-            <input type="text" id="stuLogMobile" placeholder="Apna registered mobile number likhein">
-            <label>Password</label>
-            <input type="password" id="stuLogPass" placeholder="Password daalein">
-            <button onclick="studentLoginProcess()">Sign In</button>
-        </div>
-
-        <div id="studentRegister" class="form-group">
-            <label>Pura Naam (Full Name)</label>
-            <input type="text" id="regName" placeholder="Apna naam likhein">
-            <label>Mobile Number</label>
-            <input type="text" id="regMobile" placeholder="10-digit Mobile Number">
-            <label>Naya Password Set Karein</label>
-            <input type="password" id="regPass" placeholder="Koi aasan password banayein">
-            <button style="background: #28a745;" onclick="studentRegisterProcess()">Register Now</button>
-        </div>
-
-        <div id="adminLogin" class="form-group">
-            <label>Admin Username ID</label>
-            <input type="text" id="adminUser" placeholder="Admin ID" autocomplete="off">
-            <label>Admin Password</label>
-            <input type="password" id="adminPass" placeholder="Admin Password" autocomplete="new-password">
-            <button style="background: #dc3545;" onclick="adminLoginProcess()">Secure Login</button>
-        </div>
+    <!-- 3. LIVE QUIZ DISPLAY -->
+    <div class="container">
+        <h2>Live Questions</h2>
+        <div id="questions-list">Questions load ho rahe hain...</div>
     </div>
 
     <script>
-        function switchTab(tabId) {
-            document.querySelectorAll('.form-group').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.tab').forEach(el => el.classList.remove('active-tab'));
-            
-            document.getElementById(tabId).classList.add('active');
-            if(tabId === 'studentLogin') document.getElementById('tab1').classList.add('active-tab');
-            if(tabId === 'studentRegister') document.getElementById('tab2').classList.add('active-tab');
-            if(tabId === 'adminLogin') document.getElementById('tab3').classList.add('active-tab');
-        }
+        // Supabase Credentials
+        const SUPABASE_URL = "https://tyoddpmfzlmujkpdhpxt.supabase.co";
+        const SUPABASE_KEY = "sb_publishable_AwPqYNdIpPyUOoZngM4nMg_bw0_NgJx";
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        async function studentLoginProcess() {
-            const mobile = document.getElementById('stuLogMobile').value.trim();
-            const password = document.getElementById('stuLogPass').value.trim();
-            if(!mobile || !password) return alert("Sabh fields bharna zaroori hai!");
+        // --- 1. STUDENT REGISTRATION ---
+        document.getElementById('regForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('studentName').value;
+            const mobile = document.getElementById('studentMobile').value;
+            const password = document.getElementById('studentPassword').value;
 
-            const res = await fetch('/api/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ mobile, password })
-            });
-            const data = await res.json();
-            if(data.success) {
-                localStorage.setItem('student', JSON.stringify(data.student));
-                window.location.href = 'dashboard.html';
+            const { data, error } = await _supabase
+                .from('students')
+                .insert([{ name, mobile, password }]);
+
+            if (error) {
+                alert("Registration Failed: " + error.message);
             } else {
-                alert(data.message);
+                alert("Student Registered Successfully!");
+                document.getElementById('regForm').reset();
             }
-        }
+        });
 
-        async function studentRegisterProcess() {
-            const name = document.getElementById('regName').value.trim();
-            const mobile = document.getElementById('regMobile').value.trim();
-            const password = document.getElementById('regPass').value.trim();
-            if(!name || !mobile || !password) return alert("Kripya sabhi details fill karein!");
+        // --- 2. SAVE QUESTION (ADMIN) ---
+        document.getElementById('quizForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const qtext = document.getElementById('qText').value;
+            const opta = document.getElementById('optA').value;
+            const optb = document.getElementById('optB').value;
+            const optc = document.getElementById('optC').value;
+            const optd = document.getElementById('optD').value;
+            const correct = document.getElementById('correctOpt').value;
+            const vyakhya = document.getElementById('vyakhyaText').value;
 
-            const res = await fetch('/api/register', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, mobile, password })
-            });
-            const data = await res.json();
-            alert(data.message);
-            if(data.success) {
-                switchTab('studentLogin');
-                // Yahan se input clear karne wali lines hata di gayi hain taaki details refresh na hon
-            }
-        }
+            const { data, error } = await _supabase
+                .from('questions')
+                .insert([{ qtext, opta, optb, optc, optd, correct, vyakhya }]);
 
-        async function adminLoginProcess() {
-            const username = document.getElementById('adminUser').value.trim();
-            const password = document.getElementById('adminPass').value.trim();
-
-            const res = await fetch('/api/admin/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password })
-            });
-            
-            if(res.status === 200) {
-                const data = await res.json();
-                localStorage.setItem('adminToken', data.token);
-                window.location.href = 'admin.html';
+            if (error) {
+                alert("Failed to save question: " + error.message);
             } else {
-                alert("⚠️ Login Failed: Galat Admin ID ya Password!");
+                alert("Question Saved Successfully!");
+                document.getElementById('quizForm').reset();
+                loadQuestions(); // List refresh karne ke liye
+            }
+        });
+
+        // --- 3. LOAD QUESTIONS ---
+        async function loadQuestions() {
+            const container = document.getElementById('questions-list');
+            const { data, error } = await _supabase
+                .from('questions')
+                .select('*')
+                .order('id', { ascending: true });
+
+            if (error) {
+                container.innerHTML = "Error loading questions: " + error.message;
+                return;
+            }
+
+            if (!data || data.length === 0) {
+                container.innerHTML = "Koi question nahi mila.";
+                return;
+            }
+
+            container.innerHTML = "";
+            data.forEach((q, index) => {
+                const card = document.createElement('div');
+                card.className = "question-card";
+                card.innerHTML = `
+                    <strong>Q${index + 1}: ${q.qtext}</strong><br>
+                    <input type="radio" name="q_${q.id}" value="A"> A) ${q.opta}<br>
+                    <input type="radio" name="q_${q.id}" value="B"> B) ${q.optb}<br>
+                    <input type="radio" name="q_${q.id}" value="C"> C) ${q.optc}<br>
+                    <input type="radio" name="q_${q.id}" value="D"> D) ${q.optd}<br>
+                    <button class="show-vyakhya-btn" onclick="toggleVyakhya(${q.id})">Answer & Vyakhya Dekhein</button>
+                    <div id="vyakhya_${q.id}" class="vyakhya-box">
+                        <strong>Correct Answer: ${q.correct}</strong><br>
+                        ${q.vyakhya ? '<strong>Vyakhya:</strong> ' + q.vyakhya : 'Vyakhya nahi hai.'}
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function toggleVyakhya(id) {
+            const box = document.getElementById(`vyakhya_${id}`);
+            if (box.style.display === "none" || box.style.display === "") {
+                box.style.display = "block";
+            } else {
+                box.style.display = "none";
             }
         }
+
+        // Page load hote hi questions load karein
+        window.onload = loadQuestions;
     </script>
 </body>
 </html>
