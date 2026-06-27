@@ -25,7 +25,6 @@
 </head>
 <body>
 
-    <!-- HEADER PANEL WITH WELCOME GREETING -->
     <div class="header-bar">
         <div>
             <h2 style="color: white; border: none; margin: 0; display: inline-block;">CGTS Admin Control Panel</h2>
@@ -34,7 +33,6 @@
         <button style="background:#dc3545; color:white;" onclick="localStorage.clear(); window.location.href='index.html';">🔒 Logout</button>
     </div>
 
-    <!-- STATS COUNTER GRID -->
     <div class="stats-grid">
         <div class="stats-card" style="background:#007bff;">Total Registered<br><span id="statTotal" style="font-size:24px;">0</span></div>
         <div class="stats-card" style="background:#ffc107; color:#333;">Pending Approvals<br><span id="statPending" style="font-size:24px;">0</span></div>
@@ -42,14 +40,12 @@
         <div class="stats-card" style="background:#17a2b8;">Total Live Tests<br><span id="statTests" style="font-size:24px;">0</span></div>
     </div>
 
-    <!-- ANNOUNCEMENT BOARD -->
     <div class="section" style="background: #fff3cd; border: 1px solid #ffeeba;">
         <h2>📢 Announcement Notice Board Broadcaster</h2>
         <input type="text" id="noticeText" placeholder="Announcement text likhein...">
         <button class="btn-app" style="background:#b78a00;" onclick="broadcastNotice()">Broadcast Live Notice</button>
     </div>
 
-    <!-- CREATE TEST STRUCTURE -->
     <div class="section">
         <h2>Create Test Structure</h2>
         <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:15px; margin-bottom: 15px;">
@@ -77,7 +73,6 @@
         </div>
     </div>
 
-    <!-- LIVE CONTENT TREE -->
     <div class="section">
         <h2>Live Content Management Tree</h2>
         <button class="tree-toggle-btn" onclick="toggleAllTreeNodes(true)">➕ Expand All</button>
@@ -85,13 +80,11 @@
         <div id="contentTree"></div>
     </div>
 
-    <!-- STUDENT MANAGEMENT -->
     <div class="section">
         <h2>Student Management & Approvals</h2>
         <table id="studentTable"><thead><tr><th>Naam</th><th>Mobile</th><th>Password</th><th>Status</th><th>Action</th></tr></thead><tbody></tbody></table>
     </div>
 
-    <!-- GLOBAL LEADERBOARD -->
     <div class="section" style="background: #eef9ff; border: 1px solid #bce1f5;">
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <h2>🏆 Global Leaderboard</h2>
@@ -100,7 +93,6 @@
         <table id="adminLeaderboardTable"><thead><tr><th>Rank</th><th>Student Name</th><th>Mobile No</th><th>Exam Name</th><th>Score</th><th>Date</th></tr></thead><tbody></tbody></table>
     </div>
 
-    <!-- 🔐 CHANGE ADMIN ID & PASSWORD (LAST MEIN LEADERBOARD KE NICHE) -->
     <div class="section" style="background: #fff0f0; border: 1px solid #f5c6cb;">
         <h2>🔐 Change Admin Credentials (ID & Password)</h2>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 10px;">
@@ -187,7 +179,9 @@
             test.questions.push({ qText, options: [a,b,c,d], ans, vyakhya });
 
             await fetch('/api/admin/test', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({action:'update-questions', courseId:cId, subjectId:sId, testId:tId, questions:test.questions}) });
-            alert("Saved!"); ['singleQText','optA','optB','optC','optD','vyakhyaText'].forEach(id => $(id).value = ''); loadAdminContent();
+            alert("Saved successfully!"); 
+            // Yahan se clear input fields vala array remove kar diya gaya hai taaki data screen par hi rahe
+            loadAdminContent();
         }
 
         async function uploadBulkCodeJson() {
@@ -202,7 +196,9 @@
             test.questions = test.questions.concat(parsed);
 
             await fetch('/api/admin/test', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({action:'update-questions', courseId:cId, subjectId:sId, testId:tId, questions:test.questions}) });
-            alert("Processed!"); $('directBulkCode').value = ''; loadAdminContent();
+            alert("Processed successfully!"); 
+            // Textarea clear nahi hoga ab, data retained rahega
+            loadAdminContent();
         }
 
         function downloadExcel() {
