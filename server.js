@@ -1,5 +1,5 @@
 const express = require('express');
-const fs = require('fs');
+const mongoose = require('mongoose');
 const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -7,206 +7,159 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Files paths jahan data permanent save hoga
-const CONTENT_FILE = path.join(__dirname, 'content.json');
-const STUDENTS_FILE = path.join(__dirname, 'students.json');
-const LEADERBOARD_FILE = path.join(__dirname, 'leaderboard.json');
-const ADMIN_FILE = path.join(__dirname, 'admin_credentials.json');
+// 🔴 APNA ASLI MONGODB URL NICHE INVERTED COMMAS ("") KE ANDAR PASTE KAREIN
+const MY_DATABASE_URL = "mongodb+srv://praside:praside1@cluster0.94fqc7m.mongodb.net/?appName=Cluster0";
 
-// Helper function: Data load karne ke liye
-function loadData(filePath, defaultData) {
-    try {
-        if (fs.existsSync(filePath)) {
-            return JSON.parse(fs.readFileSync(filePath, 'utf8'));
-        }
-    } catch (e) {
-        console.error("Error reading file:", filePath, e);
-    }
-    return defaultData;
-}
+const MONGO_URI = process.env.MONGO_URI || MY_DATABASE_URL;
 
-// Helper function: Data save karne ke liye
-function saveData(filePath, data) {
-    try {
-        fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
-    } catch (e) {
-        console.error("Error writing file:", filePath, e);
-    }
-}
+mongoose.connect(MONGO_URI)
+    .then(() => console.log("🔌 Connected to MongoDB Cloud successfully!"))
+    .catch(err => console.error("❌ MongoDB Connection Error:", err));
 
-// Initializing Data Variables from JSON Files
-let contentData = loadData(CONTENT_FILE, []);
-let students = loadData(STUDENTS_FILE, []);
-let leaderboard = loadData(LEADERBOARD_FILE, []);
-let adminCreds = loadData(ADMIN_FILE, { username: 'admin', password: 'cgtsadminpassword' });
+// ---------------- DATABASE SCHEMAS & MODELS ----------------
+
+const StudentSchema = new mongoose.Schema({
+    name: String, mobile: { type: String, unique: true }, password: String, status: { type: String, default: 'pending' }
+});
+const Student = mongoose.model('Student', StudentSchema);
+
+const ContentSchema = new mongoose.Schema({ id: Number, name: String, subjects: Array });
+const Content = mongoose.model('Content', ContentSchema);
+
+const LeaderboardSchema = new mongoose.Schema({
+    studentName: String, mobile: String, testName: String, score: Number, totalQs: Number,
+    extractedSubject: String, extractedTest: String, date: String
+});
+const Leaderboard = mongoose.model('Leaderboard', LeaderboardSchema);
+
+const AdminSchema = new mongoose.Schema({ username: { type: String, default: 'admin' }, password: { type: String, default: 'cgtsadminpassword' } });
+const AdminCreds = mongoose.model('AdminCreds', AdminSchema);
+
 let currentNotice = { notice: "" };
+
+// Initialize Admin Credentials if not exists
+async function initAdmin() {
+    const count = await AdminCreds.countDocuments();
+    if (count === 0) await AdminCreds.create({ username: 'admin', password: 'cgtsadminpassword' });
+}
+initAdmin();
 
 // ---------------- GLOBAL/STUDENT APIs ----------------
 
-// Get Notice
 app.get('/api/notice', (req, res) => res.json(currentNotice));
 
-// Student Register
-app.post('/api/register', (req, res) => {
+app.post('/api/register', async (req, res) => {
     const { name, mobile, password } = req.body;
     if (!name || !mobile || !password) return res.status(400).json({ success: false, message: "Details incomplete!" });
-    
-    if (students.find(s => s.mobile === mobile)) {
-        return res.json({ success: false, message: "⚠️ Mobile number pehle se registered hai!" });
-    }
-    
-    const newStudent = { id: Date.now(), name, mobile, password, status: 'pending' };
-    students.push(newStudent);
-    saveData(STUDENTS_FILE, students); // Permanent Save
-    
-    res.json({ success: true, message: "🎉 Registration safal! Admin approval ka intezar karein." });
+    try {
+        const existing = await Student.findOne({ mobile });
+        if (existing) return res.json({ success: false, message: "⚠️ Mobile number pehle se registered hai!" });
+        
+        await Student.create({ name, mobile, password, status: 'pending' });
+        res.json({ success: true, message: "🎉 Registration safal! Admin approval ka intezar karein." });
+    } catch(e) { res.status(500).json({ success: false, message: "Server error" }); }
 });
 
-// Student Login
-app.post('/api/login', (req, res) => {
+app.post('/api/login', async (req, res) => {
     const { mobile, password } = req.body;
-    const student = students.find(s => s.mobile === mobile && s.password === password);
+    const student = await Student.findOne({ mobile, password });
     if (!student) return res.status(401).json({ message: "Galat Mobile ya Password!" });
-    if (student.status !== 'approved') return res.status(403).json({ message: "⚠️ Aapka account abhi pending hai, Admin se sampark karein." });
+    if (student.status !== 'approved') return res.status(403).json({ message: "⚠️ Aapka account abhi pending hai." });
     res.json({ success: true, student });
 });
 
-// Get Student Dashboard Content
-app.get('/api/content', (req, res) => res.json(contentData));
+app.get('/api/content', async (req, res) => res.json(await Content.find({})));
 
-// Submit Test Result
-app.post('/api/submit-test', (req, res) => {
-    const { studentName, mobile, testName, score, totalQs, courseId, subjectId, testId } = req.body;
-    
-    // Find subject name for leaderboard extracted structure
-    let extSub = "General", extTest = testName;
-    const course = contentData.find(c => c.id == courseId);
+app.post('/api/submit-test', async (req, res) => {
+    const { studentName, mobile, testName, score, totalQs, courseId, subjectId } = req.body;
+    let extSub = "General";
+    const course = await Content.findOne({ id: courseId });
     if (course) {
         const sub = course.subjects.find(s => s.id == subjectId);
         if (sub) extSub = sub.name;
     }
-
-    const entry = {
-        studentName, mobile, testName, score, totalQs,
-        extractedSubject: extSub, extractedTest: extTest,
+    await Leaderboard.create({
+        studentName, mobile, testName, score, totalQs, extractedSubject: extSub, extractedTest: testName,
         date: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })
-    };
-    
-    leaderboard.push(entry);
-    saveData(LEADERBOARD_FILE, leaderboard); // Permanent Save
+    });
     res.json({ success: true, message: "Result saved!" });
 });
 
-// Get Leaderboard Data
-app.get('/api/leaderboard', (req, res) => res.json(leaderboard));
-
+app.get('/api/leaderboard', async (req, res) => res.json(await Leaderboard.find({}).sort({ _id: -1 })));
 
 // ---------------- ADMIN PANEL APIs ----------------
 
-// Admin Login
-app.post('/api/admin/login', (req, res) => {
+app.post('/api/admin/login', async (req, res) => {
     const { username, password } = req.body;
-    if (username === adminCreds.username && password === adminCreds.password) {
-        res.json({ token: 'mock-admin-token-xyz' });
-    } else {
-        res.status(401).json({ message: "Invalid Admin Credentials" });
-    }
+    const admin = await AdminCreds.findOne({ username, password });
+    if (admin) res.json({ token: 'mock-admin-token-xyz' });
+    else res.status(401).json({ message: "Invalid Admin Credentials" });
 });
 
-// Change Admin ID/Password
-app.post('/api/admin/change-credentials', (req, res) => {
+app.post('/api/admin/change-credentials', async (req, res) => {
     const { username, password } = req.body;
     if (!username || !password) return res.status(400).send("Bad request");
-    
-    adminCreds = { username, password };
-    saveData(ADMIN_FILE, adminCreds); // Permanent Save
+    await AdminCreds.deleteMany({});
+    await AdminCreds.create({ username, password });
     res.send("Updated");
 });
 
-// Get Admin Stats
-app.get('/api/admin/stats', (req, res) => {
-    const totalStudents = students.length;
-    const pendingApprovals = students.filter(s => s.status === 'pending').length;
-    const liveApproved = students.filter(s => s.status === 'approved').length;
+app.get('/api/admin/stats', async (req, res) => {
+    const totalStudents = await Student.countDocuments();
+    const pendingApprovals = await Student.countDocuments({ status: 'pending' });
+    const liveApproved = await Student.countDocuments({ status: 'approved' });
     
     let totalTests = 0;
-    contentData.forEach(c => c.subjects.forEach(s => totalTests += s.tests.length));
-
+    const allContent = await Content.find({});
+    allContent.forEach(c => c.subjects.forEach(s => totalTests += s.tests.length));
     res.json({ totalStudents, pendingApprovals, liveApproved, totalTests });
 });
 
-// Live Notice Broadcast
-app.post('/api/admin/notice', (req, res) => {
-    currentNotice.notice = req.body.notice;
-    res.send("Notice updated");
-});
+app.post('/api/admin/notice', (req, res) => { currentNotice.notice = req.body.notice; res.send("Notice updated"); });
+app.get('/api/admin/students', async (req, res) => res.json(await Student.find({})));
 
-// Get Admin Students List
-app.get('/api/admin/students', (req, res) => res.json(students));
-
-// Update Student Status (Approve/Delete)
-app.post('/api/admin/student-status', (req, res) => {
+app.post('/api/admin/student-status', async (req, res) => {
     const { id, status } = req.body;
-    if (status === 'delete') {
-        students = students.filter(s => s.id !== id);
-    } else {
-        const student = students.find(s => s.id === id);
-        if (student) student.status = status;
-    }
-    saveData(STUDENTS_FILE, students); // Permanent Save
+    if (status === 'delete') await Student.deleteOne({ id });
+    else await Student.updateOne({ id }, { status });
     res.send("Status Updated");
 });
 
-// Get Content Tree for Admin
-app.get('/api/admin/content', (req, res) => res.json(contentData));
+app.get('/api/admin/content', async (req, res) => res.json(await Content.find({})));
 
-// Manage Course (Add/Delete)
-app.post('/api/admin/course', (req, res) => {
+app.post('/api/admin/course', async (req, res) => {
     const { action, courseId, name } = req.body;
-    if (action === 'create') {
-        contentData.push({ id: Date.now(), name, subjects: [] });
-    } else if (action === 'delete') {
-        contentData = contentData.filter(c => c.id !== courseId);
-    }
-    saveData(CONTENT_FILE, contentData); // Permanent Save
+    if (action === 'create') await Content.create({ id: Date.now(), name, subjects: [] });
+    else if (action === 'delete') await Content.deleteOne({ id: courseId });
     res.send("Done");
 });
 
-// Manage Subject (Add/Delete)
-app.post('/api/admin/subject', (req, res) => {
+app.post('/api/admin/subject', async (req, res) => {
     const { action, courseId, subjectId, name } = req.body;
-    const course = contentData.find(c => c.id === courseId);
+    const course = await Content.findOne({ id: courseId });
     if (course) {
-        if (action === 'create') {
-            course.subjects.push({ id: Date.now(), name, tests: [] });
-        } else if (action === 'delete') {
-            course.subjects = course.subjects.filter(s => s.id !== subjectId);
-        }
-        saveData(CONTENT_FILE, contentData); // Permanent Save
+        if (action === 'create') course.subjects.push({ id: Date.now(), name, tests: [] });
+        else if (action === 'delete') course.subjects = course.subjects.filter(s => s.id !== subjectId);
+        await Content.updateOne({ id: courseId }, { subjects: course.subjects });
     }
     res.send("Done");
 });
 
-// Manage Test (Add/Delete/Update Questions)
-app.post('/api/admin/test', (req, res) => {
+app.post('/api/admin/test', async (req, res) => {
     const { action, courseId, subjectId, testId, name, questions } = req.body;
-    const course = contentData.find(c => c.id === courseId);
+    const course = await Content.findOne({ id: courseId });
     if (!course) return res.status(404).send("Course not found");
-    
     const subject = course.subjects.find(s => s.id === subjectId);
     if (!subject) return res.status(404).send("Subject not found");
 
-    if (action === 'create') {
-        subject.tests.push({ id: Date.now(), name, questions: [] });
-    } else if (action === 'delete') {
-        subject.tests = subject.tests.filter(t => t.id !== testId);
-    } else if (action === 'update-questions') {
+    if (action === 'create') subject.tests.push({ id: Date.now(), name, questions: [] });
+    else if (action === 'delete') subject.tests = subject.tests.filter(t => t.id !== testId);
+    else if (action === 'update-questions') {
         const test = subject.tests.find(t => t.id === testId);
         if (test) test.questions = questions;
     }
-    saveData(CONTENT_FILE, contentData); // Permanent Save
+    await Content.updateOne({ id: courseId }, { subjects: course.subjects });
     res.send("Done");
 });
 
-// Server Start Point
-app.listen(PORT, () => console.log(`🚀 Persistent Server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Cloud MongoDB Server running on port ${PORT}`));
